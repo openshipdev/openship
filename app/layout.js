@@ -1,6 +1,7 @@
 import "./globals.css";
 import ThemeToggle from "./theme-toggle";
 import { Cormorant_Garamond, Gloock } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
@@ -28,6 +29,7 @@ export default function RootLayout({ children }) {
       <body className={`${cormorant.variable} ${gloock.variable}`}>
         <ThemeToggle />
         {children}
+        <Analytics />
       </body>
     </html>
   );
