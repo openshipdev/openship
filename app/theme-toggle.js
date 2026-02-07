@@ -26,7 +26,10 @@ export default function ThemeToggle() {
 
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    const initialTheme = stored === "light" || stored === "dark" ? stored : "dark";
+    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+    const initialTheme = stored === "light" || stored === "dark" ? stored : systemTheme;
     setTheme(initialTheme);
     document.documentElement.setAttribute("data-theme", initialTheme);
   }, []);
