@@ -11,15 +11,15 @@
     "validate:skill": "python3 /Users/gilles/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/openship"
   },
   "dependencies": {
-    "@vercel/analytics": "^1.6.1",
-    "next": "latest",
-    "react": "latest",
-    "react-dom": "latest",
+    "@vercel/analytics": "^2.0.1",
+    "next": "^16.3.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
-    "ajv": "^8.17.1",
+    "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1"
   }
 }
