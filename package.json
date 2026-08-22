@@ -1,16 +1,25 @@
 {
-  "name": "open-ship-manifesto",
+  "name": "openship",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "pnpm test:protocol",
+    "test:protocol": "node scripts/validate-protocol.mjs",
+    "validate:skill": "python3 /Users/gilles/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/openship"
   },
   "dependencies": {
     "@vercel/analytics": "^1.6.1",
     "next": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
   }
 }

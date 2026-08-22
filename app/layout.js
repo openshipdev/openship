@@ -1,39 +1,34 @@
 import "./globals.css";
 import ThemeToggle from "./theme-toggle";
-import { Cormorant_Garamond, Gloock, Newsreader } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-body",
-  display: "swap",
-});
-
-const gloock = Gloock({
-  subsets: ["latin"],
-  weight: ["400"],
-  variable: "--font-display",
-  display: "swap",
-});
-
-const newsreader = Newsreader({
-  subsets: ["latin"],
-  weight: ["200", "300", "400"],
-  variable: "--font-hero",
-  display: "swap",
-});
-
 export const metadata = {
-  title: "Open Ship Manifesto",
+  metadataBase: new URL("https://openship.dev"),
+  title: {
+    default: "OpenShip — A protocol for inspectable projects",
+    template: "%s · OpenShip",
+  },
   description:
-    "Open Ship is a movement to publish not only source code, but the complete delivery loop.",
+    "OpenShip is an open protocol for publishing verifiable source, proposing isolated changes, and describing running systems.",
+  openGraph: {
+    title: "OpenShip",
+    description: "A running project should explain itself.",
+    type: "website",
+    siteName: "OpenShip",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "OpenShip protocol" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "OpenShip",
+    description: "A running project should explain itself.",
+    images: ["/og.png"],
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${cormorant.variable} ${gloock.variable} ${newsreader.variable}`}>
+      <body>
         <script
           dangerouslySetInnerHTML={{
             __html:
