@@ -1,0 +1,54 @@
+{
+  "name": "@openshipdev/protocol",
+  "version": "0.1.0",
+  "description": "Canonical OpenShip 1.0 types, validators, consumer helpers, schemas, and skill assets.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openshipdev/openship.git",
+    "directory": "packages/protocol"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "browser": "./src/index.js",
+      "node": "./src/index.js",
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    },
+    "./browser": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./node": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./schemas/*": "./dist/skill/references/schemas/*",
+    "./skill/*": "./dist/skill/*"
+  },
+  "bin": {
+    "openship": "./bin/openship.mjs"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "node scripts/prepare-package.mjs",
+    "prepack": "node scripts/prepare-package.mjs",
+    "test": "node scripts/prepare-package.mjs && node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.3.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

@@ -34,6 +34,12 @@ importers:
         specifier: ^3.0.1
         version: 3.0.1(ajv@8.20.0)
 
+  packages/protocol:
+    dependencies:
+      '@noble/hashes':
+        specifier: 2.3.0
+        version: 2.3.0
+
 packages:
 
   '@emnapi/runtime@1.11.3':
@@ -255,6 +261,10 @@ packages:
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
+
+  '@noble/hashes@2.3.0':
+    resolution: {integrity: sha512-oN+QwyX7VSHotibwubG3kpzbwKrfnyR6OOO+3Nk/53ADL7FmgHHz4TgrbaYKvvOw09u6QTx0oiH1cNCIOuN0CQ==}
+    engines: {node: '>= 20.19.0'}
 
   '@swc/helpers@0.5.23':
     resolution: {integrity: sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw==}
@@ -862,6 +872,8 @@ snapshots:
 
   '@next/swc-win32-x64-msvc@16.3.2':
     optional: true
+
+  '@noble/hashes@2.3.0': {}
 
   '@swc/helpers@0.5.23':
     dependencies:

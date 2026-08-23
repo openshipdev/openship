@@ -2,12 +2,15 @@
   "name": "openship",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.34.5",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "test": "pnpm test:protocol",
-    "test:protocol": "node scripts/validate-protocol.mjs",
+    "test:protocol": "node scripts/validate-protocol.mjs && pnpm --filter @openshipdev/protocol test",
+    "build:protocol": "pnpm --filter @openshipdev/protocol build",
+    "pack:protocol": "pnpm --filter @openshipdev/protocol pack",
     "validate:skill": "python3 /Users/gilles/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/openship"
   },
   "dependencies": {

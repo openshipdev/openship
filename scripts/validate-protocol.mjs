@@ -129,6 +129,7 @@ function validateSystems(payload) {
   assert(roots[0].parentId === undefined, 'Root must not have a parent')
 
   for (const node of system.nodes) {
+    assert(node.metadata && (node.metadata.ownership === 'first_party' || node.metadata.ownership === 'third_party'), `Node ${node.id} must declare metadata.ownership as first_party or third_party`)
     const parent = node.parentId ? nodeById.get(node.parentId) : undefined
     if (node.kind === 'Host') assert(parent?.kind === 'Root', `Host ${node.id} must have the Root parent`)
     if (node.kind === 'Container') assert(parent?.kind === 'Host', `Container ${node.id} must have a Host parent`)
