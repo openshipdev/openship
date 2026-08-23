@@ -8,9 +8,9 @@
     "build": "next build",
     "start": "next start",
     "test": "pnpm test:protocol",
-    "test:protocol": "node scripts/validate-protocol.mjs && pnpm --filter @openshipdev/protocol test",
-    "build:protocol": "pnpm --filter @openshipdev/protocol build",
-    "pack:protocol": "pnpm --filter @openshipdev/protocol pack",
+    "test:protocol": "node scripts/validate-protocol.mjs && pnpm --filter @openship/protocol test",
+    "build:protocol": "pnpm --filter @openship/protocol build",
+    "pack:protocol": "pnpm --filter @openship/protocol pack",
     "validate:skill": "python3 /Users/gilles/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/openship"
   },
   "dependencies": {

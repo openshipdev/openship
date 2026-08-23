@@ -3,8 +3,8 @@
 This repository is the sole source of truth for OpenShip 1.0.
 
 - `skills/openship/` contains the canonical protocol skill, schemas, examples, and normative references.
-- `packages/protocol/` publishes the browser/Node consumer package `@openshipdev/protocol`.
-- Protocol envelopes remain version `1.0`; package releases use independent semantic versions beginning at `0.1.0`.
+- `packages/protocol/` publishes the browser/Node consumer package `@openship/protocol`.
+- Protocol envelopes remain version `1.0`; package releases use independent semantic versions beginning at `0.0.1`.
 
 ## Consumer workflow
 

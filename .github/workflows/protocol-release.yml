@@ -24,4 +24,4 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:protocol
-      - run: pnpm --filter @openshipdev/protocol publish --no-git-checks --access public --provenance
+      - run: pnpm --filter @openship/protocol publish --no-git-checks --access public --provenance

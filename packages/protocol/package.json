@@ -1,6 +1,6 @@
 {
-  "name": "@openshipdev/protocol",
-  "version": "0.1.0",
+  "name": "@openship/protocol",
+  "version": "0.0.1",
   "description": "Canonical OpenShip 1.0 types, validators, consumer helpers, schemas, and skill assets.",
   "type": "module",
   "license": "MIT",
