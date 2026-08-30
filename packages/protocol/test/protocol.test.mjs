@@ -13,6 +13,9 @@ import {
   encodeOpenShipBase64,
   fetchOpenShip,
   matchOpenShipPattern,
+  OPENSHIP_MCP_FILE_RESOURCE_TEMPLATE,
+  OPENSHIP_MCP_MANIFEST_RESOURCE_URI,
+  OPENSHIP_MCP_TOOL_NAME,
   sha256Hex,
   validateDiscovery,
   validateChangesAccepted,
@@ -21,6 +24,7 @@ import {
   validateChangesSubmission,
   validateChangesViolation,
   validateSources,
+  validateSourcesManifest,
   validateSystems,
 } from "../src/index.js";
 
@@ -29,12 +33,17 @@ const json = async (...parts) => JSON.parse(await readFile(join(fixtures, ...par
 const execFileAsync = promisify(execFile);
 
 test("validates canonical discovery, sources, and systems fixtures", async () => {
-  validateDiscovery(await json("valid", "discovery.json"));
+  const discovery = validateDiscovery(await json("valid", "discovery.json"));
+  assert.equal(discovery.capabilities.sources.mcp, "https://mcp.example.com/mcp");
   const verified = validateSources(
     await json("valid", "sources-manifest.json"),
     await json("valid", "sources-bundle.json"),
   );
   assert.equal(verified.files.length, 2);
+  assert.equal(validateSourcesManifest(verified.manifest).digest, verified.manifest.digest);
+  assert.equal(OPENSHIP_MCP_TOOL_NAME, "openship");
+  assert.equal(OPENSHIP_MCP_MANIFEST_RESOURCE_URI, "openship://sources/manifest");
+  assert.equal(OPENSHIP_MCP_FILE_RESOURCE_TEMPLATE, "openship://sources/file{?path}");
   validateSystems(await json("valid", "systems.json"));
   validateChangesPolicy(await json("valid", "changes-policy.json"));
   validateChangesSubmission(await json("valid", "changes-submission.json"));
@@ -48,6 +57,12 @@ test("rejects invalid canonical fixtures", async () => {
   const validBundle = await json("valid", "sources-bundle.json");
   const invalidSystems = await json("invalid", "systems.json");
   assert.throws(() => validateDiscovery({ openship: "2.0", capability: "discovery" }), /unsupported major version/);
+  assert.throws(() => validateDiscovery({
+    openship: "1.0",
+    capability: "discovery",
+    project: { name: "Broken", description: "Broken MCP URL" },
+    capabilities: { sources: { manifest: "https://example.com/manifest", bundle: "https://example.com/bundle", mcp: "/mcp" } },
+  }), /absolute URL/);
   assert.throws(() => validateSources(invalidManifest, validBundle));
   assert.throws(() => validateSystems(invalidSystems));
 });

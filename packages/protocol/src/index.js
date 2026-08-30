@@ -6,6 +6,10 @@ const digestPattern = /^sha256:[0-9a-f]{64}$/;
 const hexPattern = /^[0-9a-f]{64}$/;
 const idPattern = /^[A-Za-z0-9._:-]+$/;
 
+export const OPENSHIP_MCP_TOOL_NAME = "openship";
+export const OPENSHIP_MCP_MANIFEST_RESOURCE_URI = "openship://sources/manifest";
+export const OPENSHIP_MCP_FILE_RESOURCE_TEMPLATE = "openship://sources/file{?path}";
+
 export class OpenShipValidationError extends Error {
   constructor(path, message, code = "invalid_openship") {
     super(`${path}: ${message}`);
@@ -121,7 +125,7 @@ function decodeBundleEntry(entry, path) {
   return bytes;
 }
 
-function validateManifest(value) {
+export function validateSourcesManifest(value) {
   const manifest = envelope(value, "sources");
   if (!digestPattern.test(manifest.digest)) fail("$.digest", "must be a sha256 digest");
   const project = object(manifest.project, "$.project");
@@ -151,7 +155,7 @@ function validateManifest(value) {
 }
 
 export function validateSources(manifestValue, bundleValue, options = {}) {
-  const manifest = validateManifest(manifestValue);
+  const manifest = validateSourcesManifest(manifestValue);
   const bundle = envelope(bundleValue, "sources");
   if (bundle.digest !== manifest.digest) fail("$.bundle.digest", "does not match the Manifest digest");
   const bundleFiles = object(bundle.files, "$.bundle.files");
@@ -189,6 +193,7 @@ export function validateDiscovery(value) {
     const url = string(sources[key], `$.capabilities.sources.${key}`);
     try { new URL(url); } catch { fail(`$.capabilities.sources.${key}`, "must be an absolute URL"); }
   }
+  if (sources.mcp !== undefined) absoluteUrl(sources.mcp, "$.capabilities.sources.mcp");
   if (capabilities.systems) absoluteUrl(object(capabilities.systems, "$.capabilities.systems").document, "$.capabilities.systems.document");
   if (capabilities.changes) {
     const changes = object(capabilities.changes, "$.capabilities.changes");
