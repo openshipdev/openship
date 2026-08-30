@@ -18,7 +18,21 @@ export async function generateMetadata({ params }) {
   const { slug } = await params;
   const document = getDocument(slug);
   if (!document) return {};
-  return { title: document.title, description: document.summary };
+  return {
+    title: document.title,
+    description: document.summary,
+    openGraph: {
+      title: `${document.title} · OpenShip`,
+      description: document.summary,
+      images: [],
+    },
+    twitter: {
+      card: "summary",
+      title: `${document.title} · OpenShip`,
+      description: document.summary,
+      images: [],
+    },
+  };
 }
 
 export default async function DocumentationPage({ params }) {
@@ -45,7 +59,7 @@ export default async function DocumentationPage({ params }) {
             </Link>
           ))}
           <div className="nav-raw">
-            <p className="nav-label">Portable package</p>
+            <p className="nav-label">Resources</p>
             <Link href="/skill/SKILL.md">SKILL.md ↗</Link>
             <Link href="/skill/references/schemas/discovery.schema.json">JSON schemas ↗</Link>
             <Link href="/skill/references/examples/valid/discovery.json">Examples ↗</Link>
@@ -54,26 +68,27 @@ export default async function DocumentationPage({ params }) {
 
         <article className="docs-content">
           <header className="docs-hero">
-            <p className="kicker">{document.eyebrow}</p>
+            <p className="docs-eyebrow">{document.eyebrow}</p>
             <h1>{document.title}</h1>
             <p>{document.summary}</p>
             <Link className="raw-link" href={rawDocumentUrl(document)}>
               Raw Markdown ↗
             </Link>
+            {sections.length > 0 ? (
+              <nav className="section-index" aria-label="On this page">
+                <span>On this page</span>
+                {sections.map((section) => (
+                  <a href={`#${section.id}`} key={section.id}>
+                    {section.title}
+                  </a>
+                ))}
+              </nav>
+            ) : null}
           </header>
           <div className="prose">
             <MarkdownDocument markdown={markdown} />
           </div>
         </article>
-
-        <aside className="on-this-page" aria-label="On this page">
-          <p className="nav-label">On this page</p>
-          {sections.map((section) => (
-            <a href={`#${section.id}`} key={section.id}>
-              {section.title}
-            </a>
-          ))}
-        </aside>
       </main>
       <SiteFooter />
     </>

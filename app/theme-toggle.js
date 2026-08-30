@@ -22,7 +22,7 @@ function MoonIcon() {
 }
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState(null);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
@@ -34,10 +34,11 @@ export default function ThemeToggle() {
     document.documentElement.setAttribute("data-theme", initialTheme);
   }, []);
 
-  const nextTheme = theme === "dark" ? "light" : "dark";
+  const currentTheme = theme || "light";
+  const nextTheme = currentTheme === "dark" ? "light" : "dark";
 
   function handleToggle() {
-    const updatedTheme = theme === "dark" ? "light" : "dark";
+    const updatedTheme = currentTheme === "dark" ? "light" : "dark";
     setTheme(updatedTheme);
     document.documentElement.setAttribute("data-theme", updatedTheme);
     window.localStorage.setItem(STORAGE_KEY, updatedTheme);
@@ -45,12 +46,22 @@ export default function ThemeToggle() {
 
   return (
     <button
-      aria-label={`Switch to ${nextTheme} mode`}
+      aria-label={theme ? `Switch to ${nextTheme} mode` : "Toggle color theme"}
       className="theme-toggle"
+      data-ready={theme ? "true" : "false"}
       type="button"
       onClick={handleToggle}
     >
-      {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+      {theme ? (
+        <>
+          {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+          <span className="theme-label">{nextTheme}</span>
+        </>
+      ) : (
+        <span className="theme-placeholder" aria-hidden="true">
+          theme
+        </span>
+      )}
     </button>
   );
 }
