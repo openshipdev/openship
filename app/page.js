@@ -1,99 +1,113 @@
 import Link from "next/link";
 import { SiteFooter, SiteHeader } from "../components/site-shell";
 
-const capabilities = [
+const resources = [
   {
-    number: "01",
-    name: "Sources",
-    label: "The foundation",
-    description:
-      "A verifiable snapshot of the files that make a project what it is—safe to fetch, hash, inspect, and reproduce.",
-    href: "/docs/sources",
+    label: "Protocol",
+    links: [
+      { name: "Overview", detail: "Discovery and conventions", href: "/docs/overview" },
+      { name: "Sources", detail: "Verifiable source snapshots", href: "/docs/sources" },
+      { name: "MCP", detail: "Optional Sources transport", href: "/docs/mcp" },
+      { name: "Changes", detail: "Isolated candidate versions", href: "/docs/changes" },
+      { name: "Systems", detail: "Complete system descriptions", href: "/docs/systems" },
+    ],
   },
   {
-    number: "02",
-    name: "Changes",
-    label: "The optional write path",
-    description:
-      "A proposal targets an exact source digest and can produce an isolated, inspectable candidate version.",
-    href: "/docs/changes",
+    label: "Use",
+    links: [
+      { name: "SKILL.md", detail: "Portable agent router", href: "/skill/SKILL.md" },
+      {
+        name: "Schemas",
+        detail: "Machine-readable contracts",
+        href: "/skill/references/schemas",
+      },
+      {
+        name: "Examples",
+        detail: "Valid conformance fixtures",
+        href: "/skill/references/examples/valid",
+      },
+    ],
   },
   {
-    number: "03",
-    name: "Systems",
-    label: "The complete model",
-    description:
-      "Sources plus the runtime graph, context, dataflow, dependencies, and artifacts that explain the live system.",
-    href: "/docs/systems",
+    label: "Build",
+    links: [
+      {
+        name: "@openship/protocol",
+        detail: "Types, validators, helpers, and CLI",
+        href: "https://www.npmjs.com/package/@openship/protocol",
+        external: true,
+      },
+      {
+        name: "Package docs",
+        detail: "Consumer and synchronization workflow",
+        href: "https://github.com/openshipdev/openship/tree/main/packages/protocol",
+        external: true,
+      },
+      {
+        name: "Source",
+        detail: "OpenShip on GitHub",
+        href: "https://github.com/openshipdev/openship",
+        external: true,
+      },
+    ],
   },
 ];
+
+function ResourceLink({ resource }) {
+  const content = (
+    <>
+      <span className="resource-name">{resource.name}</span>
+      <span className="resource-detail">{resource.detail}</span>
+      <span className="resource-arrow" aria-hidden="true">
+        {resource.external ? "↗" : "→"}
+      </span>
+    </>
+  );
+
+  return resource.external ? (
+    <a className="resource-link" href={resource.href} rel="noreferrer" target="_blank">
+      {content}
+    </a>
+  ) : (
+    <Link className="resource-link" href={resource.href}>
+      {content}
+    </Link>
+  );
+}
 
 export default function HomePage() {
   return (
     <>
       <SiteHeader />
-
-      <main>
-        <section className="hero">
-          <p className="kicker">Open protocol · Version 1.0</p>
-          <h1>A running project should explain itself.</h1>
-          <p className="hero-copy">
-            OpenShip gives people and agents a stable way to inspect a project’s exact
-            source, propose a change, or understand the system that is actually running.
+      <main className="home-shell">
+        <section className="home-intro" aria-labelledby="home-title">
+          <p className="status-line">Open protocol · v1.0 · draft</p>
+          <h1 id="home-title">A public interface for running software.</h1>
+          <p className="home-summary">
+            OpenShip is a public interface that lets running projects publish their source,
+            accept isolated changes, and describe the system around them.
           </p>
-          <div className="hero-actions">
-            <Link className="button button-primary" href="/docs/overview">
-              Read the protocol <span aria-hidden="true">↗</span>
-            </Link>
-            <Link className="button" href="/openship.md">
-              View raw Markdown
-            </Link>
-          </div>
+          <Link className="endpoint" href="/docs/overview">
+            <span className="prompt" aria-hidden="true">
+              $
+            </span>
+            <code>GET /.well-known/openship.json</code>
+            <span aria-hidden="true">→</span>
+          </Link>
         </section>
 
-        <section className="ladder" aria-labelledby="capabilities-title">
-          <div className="section-intro">
-            <p className="kicker">One protocol, three capabilities</p>
-            <h2 id="capabilities-title">Start with proof. Add power deliberately.</h2>
-          </div>
-          <div className="capability-grid">
-            {capabilities.map((capability) => (
-              <Link className="capability-card" href={capability.href} key={capability.name}>
-                <div className="card-meta">
-                  <span>{capability.number}</span>
-                  <span>{capability.label}</span>
-                </div>
-                <h3>{capability.name}</h3>
-                <p>{capability.description}</p>
-                <span className="card-link">Open specification ↗</span>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        <section className="install-band" aria-labelledby="install-title">
-          <div>
-            <p className="kicker">Portable by design</p>
-            <h2 id="install-title">Install the whole skill. Load only what you need.</h2>
-            <p>
-              Add the <code>skills/openship</code> directory or zip to an agent. The short
-              router points it to the overview, Sources, Changes, or Systems specification
-              without loading the entire protocol every time.
-            </p>
-          </div>
-          <div className="install-links">
-            <Link href="/skill/SKILL.md">Open SKILL.md ↗</Link>
-            <Link href="/skill/references/schemas/discovery.schema.json">Browse schemas ↗</Link>
-            <Link href="/skill/references/examples/valid/discovery.json">See valid fixtures ↗</Link>
-          </div>
-        </section>
-
-        <section className="discovery-band" aria-labelledby="discovery-title">
-          <div>
-            <p className="kicker">A predictable front door</p>
-            <h2 id="discovery-title">Discovery begins at one well-known URL.</h2>
-          </div>
-          <code>/.well-known/openship.json</code>
+        <section className="resource-index" aria-labelledby="resource-title">
+          <h2 id="resource-title">Find anything</h2>
+          {resources.map((group) => (
+            <div className="resource-group" key={group.label}>
+              <h3>{group.label}</h3>
+              <div className="resource-list">
+                {group.links.map((resource) => (
+                  <ResourceLink key={resource.name} resource={resource} />
+                ))}
+              </div>
+            </div>
+          ))}
         </section>
       </main>
       <SiteFooter />
