@@ -179,24 +179,43 @@ export function validateSources(manifestValue, bundleValue, options = {}) {
 
 export function validateDiscovery(value) {
   const discovery = envelope(value, "discovery");
+  const absoluteUrl = (value, path) => {
+    const raw = string(value, path);
+    let url;
+    try { url = new URL(raw); } catch { fail(path, "must be an absolute HTTPS URL"); }
+    const loopback = url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]" || url.hostname === "::1";
+    if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) fail(path, "must be an absolute HTTPS URL outside local development");
+    return raw;
+  };
   const project = object(discovery.project, "$.project");
   string(project.name, "$.project.name");
   string(project.description, "$.project.description");
+  const agent = object(discovery.agent, "$.agent");
+  string(agent.summary, "$.agent.summary");
+  string(agent.instructions, "$.agent.instructions");
+  absoluteUrl(agent.skill, "$.agent.skill");
+  if (discovery.page !== undefined) absoluteUrl(discovery.page, "$.page");
   const capabilities = object(discovery.capabilities, "$.capabilities");
   const sources = object(capabilities.sources, "$.capabilities.sources");
-  const absoluteUrl = (value, path) => {
-    const url = string(value, path);
-    try { new URL(url); } catch { fail(path, "must be an absolute URL"); }
-    return url;
-  };
+  string(sources.description, "$.capabilities.sources.description");
   for (const key of ["manifest", "bundle"]) {
-    const url = string(sources[key], `$.capabilities.sources.${key}`);
-    try { new URL(url); } catch { fail(`$.capabilities.sources.${key}`, "must be an absolute URL"); }
+    absoluteUrl(sources[key], `$.capabilities.sources.${key}`);
   }
-  if (sources.mcp !== undefined) absoluteUrl(sources.mcp, "$.capabilities.sources.mcp");
-  if (capabilities.systems) absoluteUrl(object(capabilities.systems, "$.capabilities.systems").document, "$.capabilities.systems.document");
+  for (const key of ["mcp", "archive", "instructions"]) {
+    if (sources[key] !== undefined) absoluteUrl(sources[key], `$.capabilities.sources.${key}`);
+  }
+  if (sources.file !== undefined) {
+    absoluteUrl(sources.file, "$.capabilities.sources.file");
+    if (!String(sources.file).includes("{path}")) fail("$.capabilities.sources.file", "must contain {path}");
+  }
+  if (capabilities.systems) {
+    const systems = object(capabilities.systems, "$.capabilities.systems");
+    string(systems.description, "$.capabilities.systems.description");
+    absoluteUrl(systems.document, "$.capabilities.systems.document");
+  }
   if (capabilities.changes) {
     const changes = object(capabilities.changes, "$.capabilities.changes");
+    string(changes.description, "$.capabilities.changes.description");
     for (const key of ["policy", "submit", "status"]) absoluteUrl(changes[key], `$.capabilities.changes.${key}`);
     if (!String(changes.status).includes("{changeId}")) fail("$.capabilities.changes.status", "must contain {changeId}");
   }

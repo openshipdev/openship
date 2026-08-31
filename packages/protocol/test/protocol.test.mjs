@@ -34,6 +34,8 @@ const execFileAsync = promisify(execFile);
 
 test("validates canonical discovery, sources, and systems fixtures", async () => {
   const discovery = validateDiscovery(await json("valid", "discovery.json"));
+  assert.equal(discovery.agent.skill, "https://example.com/openship/file/skills/openship/SKILL.md");
+  assert.equal(discovery.page, "https://example.com/openship");
   assert.equal(discovery.capabilities.sources.mcp, "https://mcp.example.com/mcp");
   const verified = validateSources(
     await json("valid", "sources-manifest.json"),
@@ -61,8 +63,30 @@ test("rejects invalid canonical fixtures", async () => {
     openship: "1.0",
     capability: "discovery",
     project: { name: "Broken", description: "Broken MCP URL" },
-    capabilities: { sources: { manifest: "https://example.com/manifest", bundle: "https://example.com/bundle", mcp: "/mcp" } },
-  }), /absolute URL/);
+    agent: {
+      summary: "OpenShip exposes capabilities for a running project.",
+      instructions: "Fetch and read agent.skill before using any capability.",
+      skill: "https://example.com/SKILL.md",
+    },
+    capabilities: { sources: { description: "Retrieve source.", manifest: "https://example.com/manifest", bundle: "https://example.com/bundle", mcp: "/mcp" } },
+  }), /absolute HTTPS URL/);
+  assert.throws(() => validateDiscovery({
+    openship: "1.0",
+    capability: "discovery",
+    project: { name: "Broken", description: "Agent bootstrap is missing." },
+    capabilities: { sources: { description: "Retrieve source.", manifest: "https://example.com/manifest", bundle: "https://example.com/bundle" } },
+  }), /\$\.agent/);
+  assert.throws(() => validateDiscovery({
+    openship: "1.0",
+    capability: "discovery",
+    project: { name: "Broken", description: "Capability description is missing." },
+    agent: {
+      summary: "OpenShip exposes capabilities for a running project.",
+      instructions: "Fetch and read agent.skill before using any capability.",
+      skill: "https://example.com/SKILL.md",
+    },
+    capabilities: { sources: { manifest: "https://example.com/manifest", bundle: "https://example.com/bundle" } },
+  }), /sources\.description/);
   assert.throws(() => validateSources(invalidManifest, validBundle));
   assert.throws(() => validateSystems(invalidSystems));
 });
@@ -135,7 +159,7 @@ test("syncs and detects edits in the canonical skill", async () => {
 test("fetches the highest advertised capability", async () => {
   const discovery = await json("valid", "discovery.json");
   const systems = await json("valid", "systems.json");
-  discovery.capabilities.systems = { document: "https://example.com/system.json" };
+  discovery.capabilities.systems = { description: "Retrieve the complete system description.", document: "https://example.com/system.json" };
   const fetcher = async (url) => ({ ok: true, status: 200, json: async () => url.endsWith("system.json") ? systems : discovery });
   const result = await fetchOpenShip("https://example.com", { fetch: fetcher });
   assert.equal(result.snapshot.kind, "systems");
