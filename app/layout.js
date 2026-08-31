@@ -9,6 +9,9 @@ export const metadata = {
   },
   description:
     "OpenShip lets running projects publish their source, accept isolated changes, and describe the system around them.",
+  icons: {
+    icon: [{ url: "/logo.svg", type: "image/svg+xml" }],
+  },
   openGraph: {
     title: "OpenShip",
     description: "A public interface for running software.",
