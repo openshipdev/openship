@@ -14,6 +14,7 @@ export function GET(request) {
         "Fetch and read agent.skill before interpreting or using any advertised capability. Resolve relative links in the skill against the skill URL.",
       skill: `${origin}/skill/SKILL.md`,
     },
+    page: `${origin}/openship`,
     capabilities: {
       sources: {
         description: "Retrieve and verify the exact source snapshot published by this deployment.",

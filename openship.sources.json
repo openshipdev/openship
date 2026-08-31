@@ -17,6 +17,7 @@
     "app/layout.js",
     "app/openship/bundle.json/route.js",
     "app/openship/manifest.json/route.js",
+    "app/openship/page.js",
     "app/page.js",
     "app/skill/[...path]/route.js",
     "app/theme-toggle.js",
