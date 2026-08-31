@@ -40,6 +40,7 @@ assert.deepEqual(Object.keys(discovery.capabilities), ["sources"]);
 assert.deepEqual(Object.keys(discovery.capabilities.sources).sort(), ["bundle", "description", "manifest"]);
 assert.equal(discovery.agent.skill, `${origin}/skill/SKILL.md`);
 assert.match(discovery.agent.instructions, /read agent\.skill/i);
+assert.equal(discovery.page, `${origin}/openship`);
 assert.equal(discovery.capabilities.sources.manifest, `${origin}/openship/manifest.json`);
 assert.equal(discovery.capabilities.sources.bundle, `${origin}/openship/bundle.json`);
 assert.equal(verified.files.length, manifest.totals.files);
