@@ -37,6 +37,8 @@
     "packages/protocol/test/protocol.test.mjs",
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",
+    "public/logo.svg",
+    "public/og-source.svg",
     "public/og.png",
     "scripts/generate-openship-sources.mjs",
     "scripts/validate-openship-site.mjs",

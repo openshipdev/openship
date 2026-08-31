@@ -6,9 +6,6 @@ export function SiteHeader() {
     <header className="site-header">
       <Link className="wordmark" href="/" aria-label="OpenShip home">
         <span className="brand-mark" aria-hidden="true" />
-        <span className="brand-divider" aria-hidden="true">
-          /
-        </span>
         OpenShip
       </Link>
       <nav className="site-nav" aria-label="Primary navigation">
