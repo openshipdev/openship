@@ -9,6 +9,7 @@ export function SiteHeader() {
         OpenShip
       </Link>
       <nav className="site-nav" aria-label="Primary navigation">
+        <Link href="/view">Viewer</Link>
         <Link href="/docs/overview">Docs</Link>
         <Link href="/skill/SKILL.md">Skill</Link>
         <a href="https://github.com/openshipdev/openship" rel="noreferrer" target="_blank">
