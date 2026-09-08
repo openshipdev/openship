@@ -1,4 +1,4 @@
-@import "reactflow/dist/style.css";
+@import "@xyflow/react/dist/style.css";
 
 .osg { --osg-bg: #fff; --osg-fg: #273242; --osg-muted: #667587; --osg-border: #cfd6df; --osg-surface: #f6f8fa; color: var(--osg-fg); background: var(--osg-bg); font: 13px/1.45 system-ui, sans-serif; border: 1px solid var(--osg-border); border-radius: 10px; overflow: hidden; }
 [data-theme="dark"] .osg { --osg-bg: #171d27; --osg-fg: #e3e9f1; --osg-muted: #a0acbe; --osg-border: #384353; --osg-surface: #202835; }

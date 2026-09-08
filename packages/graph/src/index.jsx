@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import ReactFlow, { Background, Controls, Handle, MarkerType, Position } from "reactflow";
+import { ReactFlow, Background, Controls, Handle, MarkerType, Position } from "@xyflow/react";
 import { autoLayout, buildGraph, DEFAULT_FILTERS, gridPositions } from "./model.js";
 
 function ComponentRow({ node, selected, onSelect, onContext, nested = false }) {
@@ -62,9 +62,8 @@ export function SystemGraph({ system, selectedNodeId, onSelectNode, onOpenContex
     const common = { selected: selectedNodeId, onSelect: onSelectNode, onContext: onOpenContext };
     const cards = model.cards.map((card) => ({
       id: card.node.id, type: "component", position: positions?.get(card.node.id) ?? defaults.get(card.node.id),
-      // React Flow 11 replaces controlled node internals on every update.
-      // Retain our fixed dimensions so selection does not hide nodes while
-      // ResizeObserver measures them again. CSS dimensions alone are not enough.
+      // Explicit dimensions define the fixed card size in React Flow 12.
+      // Keep them stable across selection and local layout updates.
       width: card.width, height: card.height,
       data: { ...card, ...common }, style: { width: card.width, height: card.height },
       draggable: true, selectable: false, extent: [[40, 110], [Infinity, Infinity]],
@@ -115,7 +114,7 @@ export function SystemGraph({ system, selectedNodeId, onSelectNode, onOpenContex
     <div className="osg-toolbar">{groups.map(([label, options]) => <fieldset key={label}><legend>{label}</legend>{options.map(([key, name]) => <label className="osg-chip" key={key}><input type="checkbox" checked={filters[key]} onChange={() => setFilters((value) => ({ ...value, [key]: !value[key] }))} />{name}</label>)}</fieldset>)}
       <div className="osg-actions"><button onClick={arrange} disabled={busy}>{busy ? "Arranging…" : "Auto layout"}</button><button onClick={toggleFullscreen}>{fullscreen ? "Exit fullscreen" : "Fullscreen"}</button></div>
     </div>
-    <div className="osg-canvas"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onInit={(instance) => { flow.current = instance; }} fitView minZoom={0.05} maxZoom={2.5} nodesDraggable onNodesChange={moveNodes} onNodeDragStart={() => { generation.current += 1; setBusy(false); }} nodesConnectable={false} edgesUpdatable={false} edgesFocusable={false} nodesFocusable={false} elementsSelectable={false} deleteKeyCode={null}>
+    <div className="osg-canvas"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onInit={(instance) => { flow.current = instance; }} fitView minZoom={0.05} maxZoom={2.5} nodesDraggable onNodesChange={moveNodes} onNodeDragStart={() => { generation.current += 1; setBusy(false); }} nodesConnectable={false} edgesReconnectable={false} edgesFocusable={false} nodesFocusable={false} elementsSelectable={false} deleteKeyCode={null}>
       <Background gap={14} size={1} color="#9aa5b533" /><Controls showInteractive={false} />
     </ReactFlow></div>
     <div className="osg-status" role="status">{error || `${model.included.size} components · ${edges.length} connections · Drag cards to arrange · Scroll to zoom, drag the canvas to pan. Layout changes stay in this viewer.`}{model.cards.length === 0 && " No components match these filters."}</div>

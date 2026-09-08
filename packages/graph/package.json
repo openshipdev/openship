@@ -4,10 +4,26 @@
   "description": "Interactive React graph viewer for OpenShip Systems, adapted from anticlodex's topology UX.",
   "type": "module",
   "private": true,
-  "exports": { ".": "./src/index.jsx", "./styles.css": "./src/styles.css" },
-  "files": ["src", "README.md"],
-  "sideEffects": ["**/*.css"],
-  "scripts": { "test": "node --test test/*.test.mjs" },
-  "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" },
-  "dependencies": { "reactflow": "^11.11.4", "elkjs": "^0.9.3" }
+  "exports": {
+    ".": "./src/index.jsx",
+    "./styles.css": "./src/styles.css"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.11.6",
+    "elkjs": "0.12.0"
+  }
 }
