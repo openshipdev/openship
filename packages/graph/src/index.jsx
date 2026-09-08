@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlow, Background, Controls, Handle, MarkerType, Position } from "@xyflow/react";
-import { autoLayout, buildGraph, DEFAULT_FILTERS, gridPositions } from "./model.js";
+import { autoLayout, buildGraph, DEFAULT_FILTERS, gridPositions, updateMeasurements } from "./model.js";
 
 function ComponentRow({ node, selected, onSelect, onContext, nested = false }) {
   return <div className={`osg-component ${nested ? "osg-nested" : ""} ${selected === node.id ? "osg-selected" : ""}`}>
@@ -32,6 +32,7 @@ const groups = [
 export function SystemGraph({ system, selectedNodeId, onSelectNode, onOpenContext, className = "" }) {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [positions, setPositions] = useState(null);
+  const [measurements, setMeasurements] = useState(() => new Map());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
@@ -42,7 +43,7 @@ export function SystemGraph({ system, selectedNodeId, onSelectNode, onOpenContex
   const defaults = useMemo(() => gridPositions(buildGraph(system).cards), [system]);
   const fit = () => flow.current?.fitView({ padding: 0.12, duration: 200 });
 
-  useEffect(() => { setPositions(null); }, [system]);
+  useEffect(() => { setPositions(null); setMeasurements(new Map()); }, [system]);
   useEffect(() => {
     generation.current += 1;
     setBusy(false); setError("");
@@ -64,14 +65,14 @@ export function SystemGraph({ system, selectedNodeId, onSelectNode, onOpenContex
       id: card.node.id, type: "component", position: positions?.get(card.node.id) ?? defaults.get(card.node.id),
       // Explicit dimensions define the fixed card size in React Flow 12.
       // Keep them stable across selection and local layout updates.
-      width: card.width, height: card.height,
+      width: card.width, height: card.height, measured: measurements.get(card.node.id),
       data: { ...card, ...common }, style: { width: card.width, height: card.height },
       draggable: true, selectable: false, extent: [[40, 110], [Infinity, Infinity]],
     }));
     const width = Math.max(500, ...cards.map((card) => card.position.x + card.style.width + 40));
     const height = Math.max(260, ...cards.map((card) => card.position.y + card.style.height + 40));
-    return [{ id: system.rootNodeId, type: "system", position: { x: 0, y: 0 }, data: { node: model.root, ...common }, width, height, style: { width, height }, draggable: false, selectable: false, zIndex: -1 }, ...cards];
-  }, [model, defaults, positions, selectedNodeId, onSelectNode, onOpenContext, system.rootNodeId]);
+    return [{ id: system.rootNodeId, type: "system", position: { x: 0, y: 0 }, data: { node: model.root, ...common }, width, height, measured: measurements.get(system.rootNodeId), style: { width, height }, draggable: false, selectable: false, zIndex: -1 }, ...cards];
+  }, [model, defaults, positions, measurements, selectedNodeId, onSelectNode, onOpenContext, system.rootNodeId]);
   const edges = useMemo(() => model.edges.map((edge) => ({
     id: edge.id, source: edge.source, target: edge.target, sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle,
     zIndex: 5, type: "smoothstep", label: [edge.type, edge.metadata?.protocol].filter(Boolean).join(" · "),
@@ -81,6 +82,8 @@ export function SystemGraph({ system, selectedNodeId, onSelectNode, onOpenContex
   })), [model]);
 
   function moveNodes(changes) {
+    // Retain v12 measurements so controlled updates preserve handle bounds.
+    setMeasurements((previous) => updateMeasurements(previous, changes));
     // Accept only coordinates. Selection, deletion, and structural changes are
     // deliberately excluded from this viewer's local layout state.
     const moves = changes.filter((change) => change.type === "position" && change.position && defaults.has(change.id));

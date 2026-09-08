@@ -73,3 +73,19 @@ export async function autoLayout(model) {
   });
   return new Map(result.children.map((node) => [node.id, { x: node.x + 40, y: node.y + 110 }]));
 }
+
+// React Flow 12 stores DOM dimensions separately from explicit node sizing.
+// Keep this renderer state across selection updates without accepting edits.
+export function updateMeasurements(previous, changes) {
+  let next = previous;
+  for (const change of changes) {
+    if (change.type !== "dimensions" || !change.dimensions) continue;
+    const { width, height } = change.dimensions;
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) continue;
+    const current = next.get(change.id);
+    if (current?.width === width && current?.height === height) continue;
+    if (next === previous) next = new Map(previous);
+    next.set(change.id, { width, height });
+  }
+  return next;
+}

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { autoLayout, buildGraph, DEFAULT_FILTERS, gridPositions } from '../src/model.js';
+import { autoLayout, buildGraph, DEFAULT_FILTERS, gridPositions, updateMeasurements } from '../src/model.js';
 
 const node = (id, kind, parentId, ownership = 'first_party', boundary) => ({ id, name: id, kind, parentId, metadata: { ownership, ...(boundary ? { boundary } : {}) } });
 const system = {
@@ -57,4 +57,19 @@ test('grid and ELK produce non-overlapping cards without changing provider data'
     }
   }
   assert.deepEqual(system, before);
+});
+
+test('renderer measurements survive non-dimension updates and only change on resize', () => {
+  const initial = new Map([['host', { width: 320, height: 208 }]]);
+  assert.equal(updateMeasurements(initial, [
+    { type: 'select', id: 'host', selected: true },
+    { type: 'remove', id: 'host' },
+    { type: 'position', id: 'host', position: { x: 200, y: 300 } },
+    { type: 'dimensions', id: 'host', dimensions: { width: 320, height: 208 } },
+  ]), initial);
+  const resized = updateMeasurements(initial, [{ type: 'dimensions', id: 'host', dimensions: { width: 320, height: 306 } }]);
+  assert.notEqual(resized, initial);
+  assert.equal(resized.get('host').height, 306);
+  assert.equal(initial.get('host').height, 208);
+  assert.equal(updateMeasurements(resized, [{ type: 'dimensions', id: 'host', dimensions: { width: NaN, height: 0 } }]), resized);
 });
