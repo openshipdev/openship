@@ -62,12 +62,16 @@ export function SystemGraph({ system, selectedNodeId, onSelectNode, onOpenContex
     const common = { selected: selectedNodeId, onSelect: onSelectNode, onContext: onOpenContext };
     const cards = model.cards.map((card) => ({
       id: card.node.id, type: "component", position: positions?.get(card.node.id) ?? defaults.get(card.node.id),
+      // React Flow 11 replaces controlled node internals on every update.
+      // Retain our fixed dimensions so selection does not hide nodes while
+      // ResizeObserver measures them again. CSS dimensions alone are not enough.
+      width: card.width, height: card.height,
       data: { ...card, ...common }, style: { width: card.width, height: card.height },
       draggable: true, selectable: false, extent: [[40, 110], [Infinity, Infinity]],
     }));
     const width = Math.max(500, ...cards.map((card) => card.position.x + card.style.width + 40));
     const height = Math.max(260, ...cards.map((card) => card.position.y + card.style.height + 40));
-    return [{ id: system.rootNodeId, type: "system", position: { x: 0, y: 0 }, data: { node: model.root, ...common }, style: { width, height }, draggable: false, selectable: false, zIndex: -1 }, ...cards];
+    return [{ id: system.rootNodeId, type: "system", position: { x: 0, y: 0 }, data: { node: model.root, ...common }, width, height, style: { width, height }, draggable: false, selectable: false, zIndex: -1 }, ...cards];
   }, [model, defaults, positions, selectedNodeId, onSelectNode, onOpenContext, system.rootNodeId]);
   const edges = useMemo(() => model.edges.map((edge) => ({
     id: edge.id, source: edge.source, target: edge.target, sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle,
