@@ -1,4 +1,5 @@
 import "./viewer.css";
+import "@openship/graph/styles.css";
 import { SiteHeader, SiteFooter } from "../../components/site-shell";
 import OpenShipViewer from "../../components/openship-viewer";
 

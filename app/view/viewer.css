@@ -45,14 +45,6 @@
 .viewer-file-content header { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .viewer-file-content h2 { font-size: 1rem; overflow-wrap: anywhere; margin: 8px 0; }
 .viewer-code { padding: 20px; border: 1px solid var(--border); background: var(--surface); font-size: .78rem; line-height: 1.65; overflow: auto; max-height: 75vh; tab-size: 2; }
-.viewer-diagram { border: 1px solid var(--border); border-radius: 6px; overflow: auto; max-height: 75vh; padding: 8px; }
-.viewer-diagram svg { display: block; min-width: 740px; height: auto; }
-.viewer-node { cursor: pointer; }
-.viewer-node rect { fill: var(--background); stroke: var(--border); stroke-width: 1; }
-.viewer-node rect.alternate { fill: var(--surface); }
-.viewer-node.selected > rect, .viewer-node:focus > rect { stroke: var(--foreground); stroke-width: 2; }
-.viewer-node text { fill: var(--foreground); font-size: 12px; pointer-events: none; }
-.viewer-node .viewer-node-kind { fill: var(--muted); font-size: 10px; }
 .viewer-component-picker { margin: 18px 0; }
 .viewer-node-details { margin: 24px 0; padding: 20px; border: 1px solid var(--border); }
 .viewer-node-details h3 { margin-top: 0; }

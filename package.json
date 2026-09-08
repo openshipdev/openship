@@ -8,7 +8,7 @@
     "dev": "pnpm generate:openship && next dev",
     "build": "pnpm generate:openship && next build",
     "start": "next start",
-    "test": "pnpm test:protocol && pnpm test:site-sources && pnpm test:viewer",
+    "test": "pnpm test:protocol && pnpm test:site-sources && pnpm test:viewer && pnpm --filter @openship/graph test",
     "test:protocol": "node scripts/validate-protocol.mjs && pnpm --filter @openship/protocol test",
     "test:site-sources": "node scripts/generate-openship-sources.mjs && node scripts/validate-openship-site.mjs",
     "generate:openship": "node scripts/generate-openship-sources.mjs",
@@ -24,7 +24,8 @@
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "@openship/protocol": "workspace:*"
+    "@openship/protocol": "workspace:*",
+    "@openship/graph": "workspace:*"
   },
   "devDependencies": {
     "ajv": "^8.20.0",

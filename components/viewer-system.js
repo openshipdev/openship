@@ -1,33 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { layoutSystem, nodeSourceFiles } from "../lib/viewer";
+import { useState } from "react";
+import { nodeSourceFiles } from "../lib/viewer";
+
+import { SystemGraph } from "@openship/graph";
 
 const label = (value) => typeof value === "string" ? value : JSON.stringify(value);
 
 function Metadata({ value }) {
   if (!value || !Object.keys(value).length) return null;
   return <dl className="viewer-metadata">{Object.entries(value).map(([key, item]) => <div key={key}><dt>{key}</dt><dd>{label(item)}</dd></div>)}</dl>;
-}
-
-function Architecture({ system, selected, onSelect }) {
-  const layout = useMemo(() => layoutSystem(system), [system]);
-  const [zoom, setZoom] = useState(1);
-  return <section aria-label="Architecture diagram">
-    <div className="viewer-toolbar"><p>Containment by host and container. Select a component to inspect it.</p><button onClick={() => setZoom((z) => Math.max(0.5, (z || 1) - 0.25))} aria-label="Zoom out">−</button><output aria-label="Zoom">{zoom ? `${Math.round(zoom * 100)}%` : "Fit"}</output><button onClick={() => setZoom((z) => Math.min(3, (z || 1) + 0.25))} aria-label="Zoom in">+</button><button onClick={() => setZoom(0)}>Fit to view</button></div>
-    <div className="viewer-diagram" tabIndex={0} aria-label="Scrollable system diagram">
-      <svg role="group" aria-labelledby="architecture-title architecture-description" viewBox={`0 0 ${layout.width} ${layout.height}`} style={{ width: `${(zoom || 1) * 100}%`, minWidth: zoom ? `${740 * zoom}px` : 0 }}>
-        <title id="architecture-title">{system.name} architecture</title><desc id="architecture-description">Hosts contain processes and containers. Libraries are listed at the root for display only. Each component is a keyboard-accessible button; a component selector and connection table follow.</desc>
-        {layout.boxes.map(({ node, x, y, width, height, depth }) => <g key={node.id} role="button" tabIndex={0} aria-label={`${node.name}, ${node.kind}, ${node.metadata.ownership.replaceAll("_", " ")}`} aria-pressed={selected === node.id} onClick={() => onSelect(node.id)} onKeyDown={(event) => { if (["Enter", " "].includes(event.key)) { event.preventDefault(); onSelect(node.id); } }} className={`viewer-node ${selected === node.id ? "selected" : ""}`}>
-          <title>{node.name} · {node.kind} · {label(node.metadata.availability ?? node.metadata.legacy ?? "")}</title>
-          <rect x={x} y={y} width={width} height={height} rx={6} className={depth % 2 ? "alternate" : ""} />
-          <text x={x + 12} y={y + 23}>{node.name.length > (depth ? 31 : 100) ? `${node.name.slice(0, depth ? 28 : 97)}…` : node.name}</text>
-          <text className="viewer-node-kind" x={x + 12} y={y + 44}>{node.kind} · {node.metadata.ownership === "first_party" ? "first party" : "third party"}</text>
-          {(node.metadata.availability || node.metadata.legacy) && <text className="viewer-node-kind" x={x + 12} y={y + 60}>{node.metadata.availability ? "Conditional / optional" : "Includes legacy paths"}</text>}
-        </g>)}
-      </svg>
-    </div>
-  </section>;
 }
 
 function Connections({ system, onSelect }) {
@@ -75,7 +57,7 @@ export default function SystemView({ snapshot, selection, onChange }) {
     <div className="viewer-tabs" aria-label="System views">{["architecture", "connections", "context"].map((panel) => <button key={panel} aria-pressed={selection.panel === panel} onClick={() => onChange({ panel })}>{panel[0].toUpperCase() + panel.slice(1)}</button>)}</div>
     <p className="viewer-muted">{system.name} · {system.nodes.length} components · {system.edges.length} connections. This describes the provider’s design, not live service health.</p>
     <label className="viewer-component-picker">Component <select value={selection.node} onChange={(e) => selectNode(e.target.value)}>{system.nodes.map((node) => <option key={node.id} value={node.id}>{node.name} ({node.kind})</option>)}</select></label>
-    {selection.panel === "architecture" && <Architecture system={system} selected={selection.node} onSelect={selectNode} />}
+    {selection.panel === "architecture" && <SystemGraph key={system.id} system={system} selectedNodeId={selection.node} onSelectNode={selectNode} onOpenContext={(node) => onChange({ node, panel: "context" })} />}
     {selection.panel === "connections" && <Connections system={system} onSelect={selectNode} />}
     {selection.panel === "context" && <Context key={system.id} system={system} selected={selection.node} onSource={openSource} />}
     <aside className="viewer-node-details" aria-label="Selected component" aria-live="polite"><h3>{selected.name}</h3><p>{selected.kind} · {selected.id}{selected.parentId ? ` · Parent: ${selected.parentId}` : ""}</p><Metadata value={selected.metadata} /><details><summary>Additional node properties</summary><Metadata value={Object.fromEntries(Object.entries(selected).filter(([key]) => !["id", "name", "kind", "parentId", "metadata", "sourceSelectors"].includes(key)))} /></details>
