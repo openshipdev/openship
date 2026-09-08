@@ -21,7 +21,11 @@ import '@openship/graph/styles.css';
 `system` uses the OpenShip 1.0 Systems shape and must be validated before rendering.
 `selectedNodeId`, `onSelectNode`, `onOpenContext`, and `className` are optional.
 The caller owns selection and navigation; the package owns temporary filters and
-layout. Layout never changes the supplied document. React and React DOM 19 are
+layout. Drag host and library cards to reposition them; nested components move
+with their host. Positions survive filter changes while the graph is mounted and
+reset when the viewer is reloaded. Only coordinates can change: connections,
+containment, documents, and source content remain read-only. Layout never changes
+the supplied document. React and React DOM 19 are
 peer dependencies. Consumers must support JSX and CSS imports (including the
 React Flow stylesheet imported by this package).
 

@@ -40,3 +40,6 @@
 @media (max-width: 700px) { .osg-canvas { height: 520px; } .osg .osg-toolbar { gap: 10px; } .osg .osg-actions { margin-left: 0; } }
 /* Read-only React Flow nodes disable pointer events; embedded actions opt in. */
 .osg .osg-component button { pointer-events: auto; }
+
+.osg .react-flow__node-component { cursor: grab; }
+.osg .react-flow__node-component.dragging { cursor: grabbing; }
