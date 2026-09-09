@@ -10,12 +10,19 @@ export interface SourcesManifest { openship: "1.0"; capability: "sources"; diges
 export interface SourcesBundle { openship: "1.0"; capability: "sources"; digest: string; files: Record<string, { encoding: OpenShipEncoding; content: string; [key: string]: unknown }>; [key: string]: unknown }
 export interface DiscoveryAgent { summary: string; instructions: string; skill: string; [key: string]: unknown }
 export interface DiscoveryDocument { openship: "1.0"; capability: "discovery"; project: { name: string; description: string; [key: string]: unknown }; agent: DiscoveryAgent; page?: string; capabilities: { sources: { description: string; manifest: string; bundle: string; mcp?: string; [key: string]: unknown }; systems?: { description: string; document: string; [key: string]: unknown }; changes?: { description: string; policy: string; submit: string; status: string; [key: string]: unknown }; [key: string]: unknown }; [key: string]: unknown }
-export type SystemsNodeKind = "Root" | "Host" | "Container" | "Process" | "Library";
+export type SystemsNodeKind = "Root" | "Block" | "Store" | "Host" | "Container" | "Process" | "Library";
 export type SystemsNodeOwnership = "first_party" | "third_party";
+export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
+export interface SystemsConfiguration { name: string; description: string; required: boolean; sensitive?: boolean; value?: JsonValue; secretRef?: { nodeId: string; key: string }; }
 export interface SystemsNodeMetadata { ownership: SystemsNodeOwnership; [key: string]: unknown }
-export interface SystemsNode { id: string; kind: SystemsNodeKind; name: string; parentId?: string; sourceSelectors?: string[]; metadata: SystemsNodeMetadata; [key: string]: unknown }
-export interface SystemsGraph { id: string; name: string; rootNodeId: string; nodes: SystemsNode[]; edges: Array<Record<string, unknown>>; metadata?: Record<string, unknown>; context?: Record<string, unknown>; [key: string]: unknown }
-export interface SystemsDocument { openship: "1.0"; capability: "systems"; source: { manifest: SourcesManifest; bundle: SourcesBundle; [key: string]: unknown }; system: SystemsGraph; [key: string]: unknown }
+export interface SystemsNode { id: string; kind: SystemsNodeKind; name: string; parentId?: string; sourceSelectors?: string[]; metadata: SystemsNodeMetadata; configuration?: SystemsConfiguration[]; [key: string]: unknown }
+export interface SystemsEdge { id: string; type: "Runtime" | "Dataflow" | "Dependency"; fromNodeId: string; toNodeId: string; metadata?: Record<string, unknown>; [key: string]: unknown }
+export interface SystemsLayer { id: string; name: string; role: "logical" | "technical" | "provider" | "custom"; rootNodeId: string; nodes: SystemsNode[]; edges: SystemsEdge[]; [key: string]: unknown }
+export interface SystemsRefinement { id: string; fromNodeId: string; toNodeId: string; [key: string]: unknown }
+export interface SystemsBinding { nodeId: string; resourceId?: string; configuration?: SystemsConfiguration[]; state?: { appliedMigration?: string; snapshot?: { ref: string; capturedAt: string; digest?: string } }; [key: string]: unknown }
+export interface SystemsInstance { id: string; name: string; environment: string; layerId: string; bindings: SystemsBinding[]; [key: string]: unknown }
+export interface SystemsGraph { id: string; name: string; layers: SystemsLayer[]; refinements: SystemsRefinement[]; instances?: SystemsInstance[]; metadata?: Record<string, unknown>; context?: Record<string, unknown>; [key: string]: unknown }
+export interface SystemsDocument { openship: "1.0"; capability: "systems"; systemsVersion: "2.0"; source: { manifest: SourcesManifest; bundle: SourcesBundle; [key: string]: unknown }; system: SystemsGraph; [key: string]: unknown }
 export interface VerifiedSourceFile { metadata: SourceFileMetadata; bytes: Uint8Array }
 export interface VerifiedSources { manifest: SourcesManifest; bundle: SourcesBundle; files: VerifiedSourceFile[]; decodedBytes: number }
 export interface FetchedOpenShip { origin: string; discovery: DiscoveryDocument; snapshot: { kind: "systems"; document: SystemsDocument } | { kind: "sources"; manifest: SourcesManifest; bundle: SourcesBundle }; verified: VerifiedSources }

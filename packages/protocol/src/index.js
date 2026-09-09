@@ -250,54 +250,132 @@ export function validateSystems(value, options = {}) {
   const system = object(payload.system, "$.system");
   string(system.id, "$.system.id");
   string(system.name, "$.system.name");
-  const rootNodeId = string(system.rootNodeId, "$.system.rootNodeId");
-  const nodes = array(system.nodes, "$.system.nodes");
-  const nodeById = new Map();
-  for (const [index, raw] of nodes.entries()) {
-    const node = object(raw, `$.system.nodes[${index}]`);
-    const id = string(node.id, `$.system.nodes[${index}].id`);
-    if (!idPattern.test(id)) fail(`$.system.nodes[${index}].id`, "has an invalid identifier");
-    if (nodeById.has(id)) fail(`$.system.nodes[${index}].id`, "must be unique");
-    if (!["Root", "Host", "Container", "Process", "Library"].includes(node.kind)) fail(`$.system.nodes[${index}].kind`, "is not a v1 node kind");
-    string(node.name, `$.system.nodes[${index}].name`);
-    const metadata = object(node.metadata, `$.system.nodes[${index}].metadata`);
-    if (!["first_party", "third_party"].includes(metadata.ownership)) fail(`$.system.nodes[${index}].metadata.ownership`, "must be first_party or third_party");
-    nodeById.set(id, node);
+  if (payload.systemsVersion !== "2.0") fail("$.systemsVersion", "requires layered Systems 2.0; legacy Systems is unsupported", "unsupported_version");
+  for (const key of ["nodes", "edges", "rootNodeId"]) if (key in system) fail(`$.system.${key}`, "legacy graph members are unsupported");
+  const layers = array(system.layers, "$.system.layers");
+  if (!layers.length) fail("$.system.layers", "requires at least one layer");
+  const identifier = (value, path) => {
+    if (!idPattern.test(string(value, path))) fail(path, "has an invalid identifier");
+    return value;
+  };
+  identifier(system.id, "$.system.id");
+  const jsonValue = (value, path, ancestors = new Set()) => {
+    if (value === null || typeof value === "string" || typeof value === "boolean" || (typeof value === "number" && Number.isFinite(value))) return;
+    if (typeof value !== "object" || ancestors.has(value) || (!Array.isArray(value) && ![Object.prototype, null].includes(Object.getPrototypeOf(value)))) fail(path, "must be a JSON value");
+    ancestors.add(value);
+    for (const item of Array.isArray(value) ? value : Object.values(value)) jsonValue(item, path, ancestors);
+    ancestors.delete(value);
+  };
+  const configuration = (entries, path) => {
+    if (entries === undefined) return;
+    const names = [];
+    for (const [index, raw] of array(entries, path).entries()) {
+      const at = `${path}[${index}]`, entry = object(raw, at);
+      names.push(string(entry.name, `${at}.name`));
+      string(entry.description, `${at}.description`);
+      if (typeof entry.required !== "boolean") fail(`${at}.required`, "must be boolean");
+      if (entry.sensitive !== undefined && typeof entry.sensitive !== "boolean") fail(`${at}.sensitive`, "must be boolean");
+      if ("value" in entry) jsonValue(entry.value, `${at}.value`);
+      if ("value" in entry && (entry.sensitive === true || entry.secretRef !== undefined)) fail(at, "secret configuration cannot contain a literal value");
+      if (entry.secretRef !== undefined) {
+        const ref = object(entry.secretRef, `${at}.secretRef`);
+        identifier(ref.nodeId, `${at}.secretRef.nodeId`);
+        string(ref.key, `${at}.secretRef.key`);
+      }
+    }
+    unique(names, path);
+  };
+  const nodeById = new Map(), layerByNode = new Map(), layerById = new Map();
+  for (const [index, raw] of layers.entries()) {
+    const at = `$.system.layers[${index}]`, layer = object(raw, at);
+    identifier(layer.id, `${at}.id`);
+    if (layerById.has(layer.id)) fail(`${at}.id`, "must be unique");
+    layerById.set(layer.id, layer);
+    string(layer.name, `${at}.name`);
+    if (!["logical", "technical", "provider", "custom"].includes(layer.role)) fail(`${at}.role`, "invalid layer role");
+    const rootNodeId = identifier(layer.rootNodeId, `${at}.rootNodeId`);
+    const nodes = array(layer.nodes, `${at}.nodes`), local = new Map();
+    for (const [i, rawNode] of nodes.entries()) {
+      const path = `${at}.nodes[${i}]`, node = object(rawNode, path);
+      identifier(node.id, `${path}.id`);
+      if (nodeById.has(node.id)) fail(`${path}.id`, "must be globally unique");
+      if (!["Root", "Block", "Store", "Host", "Container", "Process", "Library"].includes(node.kind)) fail(`${path}.kind`, "invalid node kind");
+      string(node.name, `${path}.name`);
+      const metadata = object(node.metadata, `${path}.metadata`);
+      if (!["first_party", "third_party"].includes(metadata.ownership)) fail(`${path}.metadata.ownership`, "must be first_party or third_party");
+      configuration(node.configuration, `${path}.configuration`);
+      if (node.sourceSelectors !== undefined) {
+        unique(array(node.sourceSelectors, `${path}.sourceSelectors`), `${path}.sourceSelectors`);
+        for (const selector of node.sourceSelectors) {
+          string(selector, `${path}.sourceSelectors`);
+          if (!source.manifest.files.some((file) => matchOpenShipPattern(selector, file.path))) fail(`${path}.sourceSelectors`, `${selector} matches no source path`);
+        }
+      }
+      nodeById.set(node.id, node); local.set(node.id, node); layerByNode.set(node.id, index);
+    }
+    const roots = nodes.filter((node) => node.kind === "Root");
+    if (roots.length !== 1 || roots[0].id !== rootNodeId || roots[0].parentId !== undefined) fail(`${at}.rootNodeId`, "must identify the one parentless Root");
+    for (const node of nodes) if (node.id !== rootNodeId && !local.has(node.parentId)) fail(`${at}.nodes.${node.id}.parentId`, "must reference a parent in this layer");
+    assertAcyclic([...local.keys()], nodes.filter((node) => node.parentId).map((node) => [node.parentId, node.id]), `${at}.nodes`);
+    const edges = array(layer.edges, `${at}.edges`);
+    unique(edges.map((edge) => identifier(object(edge, `${at}.edges`).id, `${at}.edges.id`)), `${at}.edges`);
+    for (const edge of edges) {
+      const from = local.get(edge.fromNodeId), to = local.get(edge.toNodeId);
+      if (!from || !to || from.kind === "Root" || to.kind === "Root") fail(`${at}.edges.${edge.id}`, "endpoints must be non-root nodes in this layer");
+      if (!["Runtime", "Dataflow", "Dependency"].includes(edge.type)) fail(`${at}.edges.${edge.id}.type`, "invalid edge type");
+    }
+    for (const type of ["Dataflow", "Dependency"]) assertAcyclic([...local.keys()], edges.filter((edge) => edge.type === type).map((edge) => [edge.fromNodeId, edge.toNodeId]), `${at}.edges[${type}]`);
   }
-  const roots = nodes.filter((node) => node.kind === "Root");
-  if (roots.length !== 1 || roots[0].id !== rootNodeId) fail("$.system.rootNodeId", "must identify the one Root node");
-  if (roots[0].parentId !== undefined) fail("$.system.nodes", "the Root must not have a parent");
-  for (const node of nodes) {
-    const parent = node.parentId ? nodeById.get(node.parentId) : undefined;
-    if (node.kind === "Host" && parent?.kind !== "Root") fail(`$.system.nodes.${node.id}.parentId`, "Host must have the Root parent");
-    if (node.kind === "Container" && parent?.kind !== "Host") fail(`$.system.nodes.${node.id}.parentId`, "Container must have a Host parent");
-    if (node.kind === "Process" && parent?.kind !== "Host" && parent?.kind !== "Container") fail(`$.system.nodes.${node.id}.parentId`, "Process must have a Host or Container parent");
-    if (node.kind === "Library" && node.parentId !== undefined) fail(`$.system.nodes.${node.id}.parentId`, "Library must not have a parent");
-    for (const selector of node.sourceSelectors ?? []) {
-      if (!source.manifest.files.some((file) => matchOpenShipPattern(selector, file.path))) fail(`$.system.nodes.${node.id}.sourceSelectors`, `${selector} matches no source path`);
+  const refinements = array(system.refinements, "$.system.refinements");
+  unique(refinements.map((ref) => identifier(object(ref, "$.system.refinements").id, "$.system.refinements.id")), "$.system.refinements");
+  for (const ref of refinements) {
+    if (!nodeById.has(ref.fromNodeId) || !nodeById.has(ref.toNodeId) || layerByNode.get(ref.fromNodeId) <= layerByNode.get(ref.toNodeId)) fail(`$.system.refinements.${ref.id}`, "must connect a concrete node to a node in an earlier layer");
+  }
+  const instances = array(system.instances ?? [], "$.system.instances");
+  unique(instances.map((instance) => identifier(object(instance, "$.system.instances").id, "$.system.instances.id")), "$.system.instances");
+  for (const instance of instances) {
+    const at = `$.system.instances.${instance.id}`;
+    string(instance.name, `${at}.name`); string(instance.environment, `${at}.environment`);
+    const layer = layerById.get(instance.layerId);
+    if (!layer) fail(`${at}.layerId`, "must reference a layer");
+    const bindings = array(instance.bindings, `${at}.bindings`);
+    unique(bindings.map((binding) => object(binding, `${at}.bindings`).nodeId), `${at}.bindings`);
+    for (const binding of bindings) {
+      const node = nodeById.get(binding.nodeId);
+      if (!node || !layer.nodes.includes(node) || node.kind === "Root") fail(`${at}.bindings`, "must bind non-root nodes in the instance layer");
+      if (binding.resourceId !== undefined) string(binding.resourceId, `${at}.resourceId`);
+      configuration(binding.configuration, `${at}.configuration`);
+      if (binding.state !== undefined) {
+        if (node.kind !== "Store") fail(`${at}.state`, "database state requires a Store node");
+        const state = object(binding.state, `${at}.state`);
+        if (state.appliedMigration !== undefined) string(state.appliedMigration, `${at}.state.appliedMigration`);
+        if (state.snapshot !== undefined) {
+          const snapshot = object(state.snapshot, `${at}.state.snapshot`);
+          string(snapshot.ref, `${at}.state.snapshot.ref`);
+          if (typeof snapshot.capturedAt !== "string" || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)$/.test(snapshot.capturedAt) || !Number.isFinite(Date.parse(snapshot.capturedAt))) fail(`${at}.state.snapshot.capturedAt`, "must be an RFC3339 timestamp");
+          const [year, month, day] = snapshot.capturedAt.slice(0, 10).split("-").map(Number);
+          if (day < 1 || day > new Date(Date.UTC(year, month, 0)).getUTCDate()) fail(`${at}.state.snapshot.capturedAt`, "must be a valid calendar date");
+          if (snapshot.digest !== undefined && !digestPattern.test(snapshot.digest)) fail(`${at}.state.snapshot.digest`, "must be a sha256 digest");
+        }
+      }
     }
   }
-  assertAcyclic(nodes.map((node) => node.id), nodes.filter((node) => node.parentId).map((node) => [node.parentId, node.id]), "$.system.nodes");
-  const edges = array(system.edges, "$.system.edges");
-  unique(edges.map((edge) => edge.id), "$.system.edges[].id");
-  for (const edge of edges) {
-    const from = nodeById.get(edge.fromNodeId);
-    const to = nodeById.get(edge.toNodeId);
-    if (!from || !to) fail(`$.system.edges.${edge.id}`, "references a missing node");
-    if (from.kind !== "Process") fail(`$.system.edges.${edge.id}.fromNodeId`, "must reference a Process");
-    if (edge.type === "Dependency" && to.kind !== "Library") fail(`$.system.edges.${edge.id}.toNodeId`, "Dependency must target a Library");
-    if ((edge.type === "Runtime" || edge.type === "Dataflow") && to.kind !== "Process" && to.kind !== "Container") fail(`$.system.edges.${edge.id}.toNodeId`, "must target a Process or Container");
-    if (!["Runtime", "Dataflow", "Dependency"].includes(edge.type)) fail(`$.system.edges.${edge.id}.type`, "is not a v1 edge type");
+  for (const entries of [...nodeById.values()].map((node) => node.configuration).concat(instances.flatMap((instance) => instance.bindings.map((binding) => binding.configuration)))) {
+    for (const entry of entries ?? []) if (entry.secretRef && (!nodeById.has(entry.secretRef.nodeId) || nodeById.get(entry.secretRef.nodeId).kind === "Root")) fail("$.system.configuration.secretRef.nodeId", "must reference a component");
   }
-  const ids = nodes.map((node) => node.id);
-  assertAcyclic(ids, edges.filter((edge) => edge.type === "Dataflow").map((edge) => [edge.fromNodeId, edge.toNodeId]), "$.system.edges[Dataflow]");
-  assertAcyclic(ids, edges.filter((edge) => edge.type === "Dependency").map((edge) => [edge.fromNodeId, edge.toNodeId]), "$.system.edges[Dependency]");
   const context = system.context;
   if (!context) return payload;
   object(context, "$.system.context");
+  for (const key of ["concerns", "documents", "matrix", "artifacts", "systemPromptRefs"]) if (context[key] !== undefined) array(context[key], `$.system.context.${key}`);
+  unique(context.concerns ?? [], "$.system.context.concerns");
+  for (const concern of context.concerns ?? []) string(concern, "$.system.context.concerns");
   const concerns = new Set(context.concerns ?? []);
   const documents = new Map();
   for (const document of context.documents ?? []) {
+    object(document, "$.system.context.documents");
+    string(document.title, "$.system.context.documents.title");
+    string(document.language, "$.system.context.documents.language");
+    if (typeof document.text !== "string") fail("$.system.context.documents.text", "must be a string");
     if (!["Document", "Skill", "Prompt"].includes(document.kind)) fail("$.system.context.documents", "contains an invalid document kind");
     const expected = `sha256:${sha256Hex(`${document.kind}\n${document.title}\n${document.language}\n${document.text}`)}`;
     if (document.hash !== expected) fail(`$.system.context.documents.${document.hash}`, "hash does not match canonical document content");
@@ -306,6 +384,8 @@ export function validateSystems(value, options = {}) {
   }
   assertAcyclic([...documents.keys()], [...documents.values()].filter((doc) => doc.supersedes && documents.has(doc.supersedes)).map((doc) => [doc.hash, doc.supersedes]), "$.system.context.documents[].supersedes");
   for (const cell of context.matrix ?? []) {
+    object(cell, "$.system.context.matrix");
+    for (const key of ["documentRefs", "skillRefs"]) if (cell[key] !== undefined) unique(array(cell[key], `$.system.context.matrix.${key}`), `$.system.context.matrix.${key}`);
     if (!nodeById.has(cell.nodeId)) fail("$.system.context.matrix", `references missing node ${cell.nodeId}`);
     if (!concerns.has(cell.concern)) fail("$.system.context.matrix", `references undeclared concern ${cell.concern}`);
     for (const hash of cell.documentRefs ?? []) if (documents.get(hash)?.kind !== "Document") fail("$.system.context.matrix", `Document reference ${hash} is missing or has the wrong kind`);
@@ -315,7 +395,8 @@ export function validateSystems(value, options = {}) {
   const artifactIds = [];
   const sourcePaths = new Set(source.manifest.files.map((file) => file.path));
   for (const artifact of context.artifacts ?? []) {
-    artifactIds.push(artifact.id);
+    object(artifact, "$.system.context.artifacts");
+    artifactIds.push(identifier(artifact.id, "$.system.context.artifacts.id"));
     if (!nodeById.has(artifact.nodeId)) fail("$.system.context.artifacts", `references missing node ${artifact.nodeId}`);
     if (!concerns.has(artifact.concern)) fail("$.system.context.artifacts", `references undeclared concern ${artifact.concern}`);
     if (artifact.type === "Code") {
