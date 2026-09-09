@@ -114,3 +114,12 @@ test('parallel, reverse, self and skipped-row connections have clear labels and 
   const filtered = buildGraph(fixture, { ...DEFAULT_FILTERS, Runtime: false, Dataflow: false, Dependency: false });
   assert.equal(filtered.cards.find(card => card.node.id === 'host').width, 320);
 });
+
+test('logical blocks and stores render without hosts and keep nested library containment', () => {
+  const layer = { rootNodeId: 'root', nodes: [node('root', 'Root'), node('capability', 'Block', 'root'), node('data', 'Store', 'root'), node('library', 'Library', 'capability')], edges: [{ id: 'uses', type: 'Runtime', fromNodeId: 'capability', toNodeId: 'data' }] };
+  const graph = buildGraph(layer);
+  assert.deepEqual(graph.cards.map(card => card.node.id), ['capability', 'data']);
+  assert.deepEqual(graph.cards[0].children.map(child => child.id), ['library']);
+  assert.equal(graph.edges[0].source, 'capability');
+  assert.equal(graph.edges[0].target, 'data');
+});

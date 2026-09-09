@@ -124,8 +124,8 @@ test("rejects graph cycles and accepts unknown members", async () => {
   const systems = await json("valid", "systems.json");
   systems.vendorExtension = { preserved: true };
   assert.equal(validateSystems(systems).vendorExtension.preserved, true);
-  systems.system.nodes.push({ id: "p.worker", kind: "Process", name: "Worker", parentId: "h.runtime", metadata: { ownership: "first_party" } });
-  systems.system.edges = [
+  systems.system.layers[0].nodes.push({ id: "p.worker", kind: "Process", name: "Worker", parentId: "h.runtime", metadata: { ownership: "first_party" } });
+  systems.system.layers[0].edges = [
     { id: "e.one", type: "Dataflow", fromNodeId: "p.web", toNodeId: "p.worker" },
     { id: "e.two", type: "Dataflow", fromNodeId: "p.worker", toNodeId: "p.web" },
   ];
@@ -134,11 +134,11 @@ test("rejects graph cycles and accepts unknown members", async () => {
 
 test("requires typed ownership on every Systems node", async () => {
   const missing = await json("valid", "systems.json");
-  delete missing.system.nodes[0].metadata.ownership;
+  delete missing.system.layers[0].nodes[0].metadata.ownership;
   assert.throws(() => validateSystems(missing), /metadata\.ownership/);
 
   const invalid = await json("valid", "systems.json");
-  invalid.system.nodes[0].metadata.ownership = "partner";
+  invalid.system.layers[0].nodes[0].metadata.ownership = "partner";
   assert.throws(() => validateSystems(invalid), /first_party or third_party/);
 });
 

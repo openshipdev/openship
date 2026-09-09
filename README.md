@@ -44,3 +44,9 @@ numeric `metadata.order` affects diagram ordering; all conformant v1 graphs work
 The current browser limits are 1 MiB discovery, 64 MiB per document, 32 MiB decoded Sources,
 30 seconds per request, and 2,000 nodes / 10,000 connections for diagrams. Loopback HTTP is
 available only in development. Run `pnpm test:viewer` for loader, validation and URL-state tests.
+
+## Layered Systems release
+
+`@openship/protocol` 0.1.0 introduces Systems 2.0 (`systemsVersion: "2.0"`). Consumers must use ordered `system.layers`, explicit `system.refinements`, and optional `system.instances`; the old graph is rejected. Sources and Changes remain compatible. The viewer renders one layer at a time and binds instances separately.
+
+Release the tested protocol tarball before deploying migrated consumers. Memorioso must pin 0.1.0 and synchronize its vendored skill with that exact artifact. Roll out the updated viewer and Memorioso together; consumers can explicitly select Sources while a provider still serves legacy Systems. Secret and snapshot references remain descriptive and unresolved.

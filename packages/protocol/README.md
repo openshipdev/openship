@@ -13,3 +13,5 @@ if (imported.snapshot.kind === "systems") validateSystems(imported.snapshot.docu
 ```
 
 The package contains the exact canonical `skills/openship` schemas, examples, and references. See the repository root README for the generated-skill workflow.
+
+Version 0.1.0 replaces legacy Systems with `systemsVersion: "2.0"`: `system.layers`, `system.refinements`, and optional `system.instances`. Sources and Changes retain their 1.0 formats. Consumers must migrate; `validateSystems` explicitly rejects the legacy graph. Each layer is independently renderable, while node IDs and shared context span the entire system.

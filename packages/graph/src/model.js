@@ -26,7 +26,7 @@ export function buildGraph(system, filters = DEFAULT_FILTERS) {
     if (!included.has(node.id) || node.id === system.rootNodeId) continue;
     let host = node;
     const visited = new Set([node.id]);
-    if (node.kind !== "Library") {
+    {
       let parent = byId.get(node.parentId);
       while (parent && parent.id !== system.rootNodeId && !visited.has(parent.id)) {
         visited.add(parent.id);

@@ -10,7 +10,7 @@ function ComponentRow({ node, selected, onSelect, onContext, nested = false, row
     <Handle type="target" position={Position.Left} id={`in:${node.id}`} isConnectable={false} />
     <Handle type="source" position={Position.Right} id={`out:${node.id}`} isConnectable={false} />
     <button className="osg-name nodrag" aria-pressed={selected === node.id} onClick={() => onSelect?.(node.id)} title={node.name}>{node.name}</button>
-    <div className="osg-meta">{node.metadata?.ownership?.replaceAll("_", " ")}{node.metadata?.boundary ? ` · ${String(node.metadata.boundary)}` : ""}</div>
+    <div className="osg-meta">{node.instanceBinding ? `Instance: ${node.instanceBinding.resourceId ?? "unresolved"} · ` : ""}{node.metadata?.ownership?.replaceAll("_", " ")}{node.metadata?.boundary ? ` · ${String(node.metadata.boundary)}` : ""}</div>
     {onContext && <button className="osg-context nodrag" onClick={() => onContext(node.id)}>Documents & sources ↗</button>}
   </div>;
 }
