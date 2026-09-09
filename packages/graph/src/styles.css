@@ -15,9 +15,9 @@
 .osg button:focus-visible { outline: 2px solid #2f71ff; outline-offset: 3px; }
 .osg button:disabled { opacity: .5; cursor: wait; }
 .osg-canvas { height: 640px; background: var(--osg-surface); }
-.osg .osg-card { height: 100%; border: 1px solid var(--osg-border); border-radius: 9px; padding: 18px 15px; background: var(--osg-bg); box-shadow: 0 2px 8px #00000008; }
+.osg .osg-card { position: relative; height: 100%; border: 1px solid var(--osg-border); border-radius: 9px; padding: 18px 15px; background: var(--osg-bg); box-shadow: 0 2px 8px #00000008; }
 .osg .osg-component { position: relative; min-height: 72px; }
-.osg .osg-nested { border: 1px solid var(--osg-border); border-radius: 6px; background: var(--osg-surface); padding: 10px; margin-top: 26px; height: 72px; }
+.osg .osg-nested { border: 1px solid var(--osg-border); border-radius: 6px; background: var(--osg-surface); padding: 10px; margin-top: 0; height: 72px; }
 .osg .osg-badge { position: absolute; top: -36px; left: 0; padding: 3px 8px; border-radius: 5px 5px 0 0; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; background: #737e8e; color: white; }
 .osg .osg-nested .osg-badge { top: -20px; left: 8px; padding: 2px 7px; }
 .osg .osg-badge-host { background: #2f71ff; }
@@ -43,3 +43,9 @@
 
 .osg .react-flow__node-component { cursor: grab; }
 .osg .react-flow__node-component.dragging { cursor: grabbing; }
+
+/* Keep internal wiring beside the content, with labels on dedicated port rows. */
+.osg .osg-card .react-flow__handle { top: 36px; }
+.osg-internal-connections { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.osg-internal-path { fill: none; stroke: var(--osg-muted); stroke-width: 1.5; stroke-linejoin: round; }
+.osg-internal-label { display: inline-block; max-width: 180px; height: 20px; padding: 2px 6px; border-radius: 4px; background: var(--osg-bg); color: var(--osg-fg); font-size: 10px; line-height: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: auto; }

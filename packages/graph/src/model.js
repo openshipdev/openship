@@ -48,7 +48,38 @@ export function buildGraph(system, filters = DEFAULT_FILTERS) {
     sourceHandle: `out:${edge.fromNodeId}`,
     targetHandle: `in:${edge.toNodeId}`,
   }));
+  for (const card of cards) Object.assign(card, layoutCard(card, edges));
   return { root: byId.get(system.rootNodeId), cards, edges, included };
+}
+
+// Internal connections have their own right-hand gutter. Every endpoint gets a
+// separate vertical slot, including parallel edges, reverse edges and self loops.
+export function layoutCard(card, edges) {
+  const internal = edges.filter((edge) => edge.source === card.node.id && edge.target === card.node.id)
+    .sort((a, b) => a.id.localeCompare(b.id));
+  const rows = new Map();
+  let top = 18;
+  for (const node of [card.node, ...card.children]) {
+    const ports = [];
+    for (const edge of internal) {
+      if (edge.fromNodeId === node.id) ports.push({ edgeId: edge.id, type: "source" });
+      if (edge.toNodeId === node.id) ports.push({ edgeId: edge.id, type: "target" });
+    }
+    const height = Math.max(72, 60 + ports.length * 24);
+    rows.set(node.id, { top, height, ports: ports.map((port, index) => ({ ...port, y: top + 60 + index * 24 })) });
+    top += height + 26;
+  }
+  const routes = internal.map((edge, index) => {
+    const sourceY = rows.get(edge.fromNodeId).ports.find((port) => port.edgeId === edge.id && port.type === "source").y;
+    const targetY = rows.get(edge.toNodeId).ports.find((port) => port.edgeId === edge.id && port.type === "target").y;
+    const railX = 516 + index * 18;
+    const direction = Math.sign(targetY - sourceY);
+    const label = [edge.type, edge.metadata?.protocol].filter(Boolean).join(" · ");
+    return { ...edge, sourceY, targetY, railX, label,
+      path: `M 304 ${sourceY} H ${railX - 8} Q ${railX} ${sourceY} ${railX} ${sourceY + direction * 8} V ${targetY - direction * 8} Q ${railX} ${targetY} ${railX - 8} ${targetY} H 308`,
+    };
+  });
+  return { rows, routes, width: internal.length ? 540 + (internal.length - 1) * 18 : 320, height: top - 26 + 18 };
 }
 
 export function gridPositions(cards) {
@@ -56,7 +87,8 @@ export function gridPositions(cards) {
   let y = 110;
   for (let i = 0; i < cards.length; i += 3) {
     const row = cards.slice(i, i + 3);
-    row.forEach((card, column) => positions.set(card.node.id, { x: 40 + column * 420, y }));
+    let x = 40;
+    row.forEach((card) => { positions.set(card.node.id, { x, y }); x += card.width + 100; });
     y += Math.max(...row.map((card) => card.height)) + 90;
   }
   return positions;

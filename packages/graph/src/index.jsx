@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { ReactFlow, Background, Controls, Handle, MarkerType, Position } from "@xyflow/react";
 import { autoLayout, buildGraph, DEFAULT_FILTERS, gridPositions, updateMeasurements } from "./model.js";
 
-function ComponentRow({ node, selected, onSelect, onContext, nested = false }) {
-  return <div className={`osg-component ${nested ? "osg-nested" : ""} ${selected === node.id ? "osg-selected" : ""}`}>
+function ComponentRow({ node, selected, onSelect, onContext, nested = false, row }) {
+  return <div className={`osg-component ${nested ? "osg-nested" : ""} ${selected === node.id ? "osg-selected" : ""}`} style={row ? { position: "absolute", top: row.top, left: 15, width: 288, height: row.height } : undefined}>
     <span className={`osg-badge osg-badge-${node.kind.toLowerCase()}`}>{node.kind === "Root" ? "System" : node.kind}</span>
     <Handle type="target" position={Position.Left} id={`in:${node.id}`} isConnectable={false} />
     <Handle type="source" position={Position.Right} id={`out:${node.id}`} isConnectable={false} />
@@ -16,7 +16,20 @@ function ComponentRow({ node, selected, onSelect, onContext, nested = false }) {
 }
 
 function Card({ data }) {
-  return <div className="osg-card"><ComponentRow {...data} />{data.children.map((node) => <ComponentRow key={node.id} {...data} node={node} nested />)}</div>;
+  const markerId = `osg-arrow-${useId().replaceAll(":", "")}`;
+  return <div className="osg-card">
+    <ComponentRow {...data} row={data.rows.get(data.node.id)} />
+    {data.children.map((node) => <ComponentRow key={node.id} {...data} node={node} row={data.rows.get(node.id)} nested />)}
+    {data.routes.length > 0 && <svg className="osg-internal-connections" width={data.width} height={data.height} aria-label="Connections within this host">
+      <defs><marker id={markerId} viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 8 4 L 0 8 Z" fill="var(--osg-muted)" /></marker></defs>
+      {data.routes.map((route) => <g key={route.id}>
+        <title>{`${route.fromNodeId} → ${route.toNodeId}: ${route.label}`}</title>
+        <path className="osg-internal-path" d={route.path} markerEnd={`url(#${markerId})`} strokeDasharray={route.type === "Dependency" ? "5 4" : undefined} />
+        <circle cx="304" cy={route.sourceY} r="2.5" fill="var(--osg-muted)" />
+        <foreignObject x="320" y={route.sourceY - 10} width="180" height="20"><div className="osg-internal-label" title={route.label}>{route.label}</div></foreignObject>
+      </g>)}
+    </svg>}
+  </div>;
 }
 function Root({ data }) {
   return <div className="osg-root"><ComponentRow {...data} /></div>;
@@ -73,13 +86,13 @@ export function SystemGraph({ system, selectedNodeId, onSelectNode, onOpenContex
     const height = Math.max(260, ...cards.map((card) => card.position.y + card.style.height + 40));
     return [{ id: system.rootNodeId, type: "system", position: { x: 0, y: 0 }, data: { node: model.root, ...common }, width, height, measured: measurements.get(system.rootNodeId), style: { width, height }, draggable: false, selectable: false, zIndex: -1 }, ...cards];
   }, [model, defaults, positions, measurements, selectedNodeId, onSelectNode, onOpenContext, system.rootNodeId]);
-  const edges = useMemo(() => model.edges.map((edge) => ({
+  const edges = useMemo(() => model.edges.filter((edge) => edge.source !== edge.target || edge.source === system.rootNodeId).map((edge) => ({
     id: edge.id, source: edge.source, target: edge.target, sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle,
     zIndex: 5, type: "smoothstep", label: [edge.type, edge.metadata?.protocol].filter(Boolean).join(" · "),
     markerEnd: { type: MarkerType.ArrowClosed, color: "#8592a3" },
     style: { stroke: "#8592a3", strokeWidth: 1.5, strokeDasharray: edge.type === "Dependency" ? "5 4" : undefined },
     labelStyle: { fill: "var(--osg-fg)", fontSize: 10 }, labelBgStyle: { fill: "var(--osg-bg)" },
-  })), [model]);
+  })), [model, system.rootNodeId]);
 
   function moveNodes(changes) {
     // Retain v12 measurements so controlled updates preserve handle bounds.
@@ -120,6 +133,6 @@ export function SystemGraph({ system, selectedNodeId, onSelectNode, onOpenContex
     <div className="osg-canvas"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onInit={(instance) => { flow.current = instance; }} fitView minZoom={0.05} maxZoom={2.5} nodesDraggable onNodesChange={moveNodes} onNodeDragStart={() => { generation.current += 1; setBusy(false); }} nodesConnectable={false} edgesReconnectable={false} edgesFocusable={false} nodesFocusable={false} elementsSelectable={false} deleteKeyCode={null}>
       <Background gap={14} size={1} color="#9aa5b533" /><Controls showInteractive={false} />
     </ReactFlow></div>
-    <div className="osg-status" role="status">{error || `${model.included.size} components · ${edges.length} connections · Drag cards to arrange · Scroll to zoom, drag the canvas to pan. Layout changes stay in this viewer.`}{model.cards.length === 0 && " No components match these filters."}</div>
+    <div className="osg-status" role="status">{error || `${model.included.size} components · ${model.edges.length} connections · Drag cards to arrange · Scroll to zoom, drag the canvas to pan. Layout changes stay in this viewer.`}{model.cards.length === 0 && " No components match these filters."}</div>
   </section>;
 }

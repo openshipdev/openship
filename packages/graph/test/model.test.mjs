@@ -73,3 +73,29 @@ test('renderer measurements survive non-dimension updates and only change on res
   assert.equal(initial.get('host').height, 208);
   assert.equal(updateMeasurements(resized, [{ type: 'dimensions', id: 'host', dimensions: { width: NaN, height: 0 } }]), resized);
 });
+
+test('internal wiring reserves clear lanes and unique ports for parallel, reverse and self edges', () => {
+  const fixture = structuredClone(system);
+  fixture.edges.push(
+    { id: 'parallel', fromNodeId: 'container', toNodeId: 'app', type: 'Runtime' },
+    { id: 'reverse', fromNodeId: 'app', toNodeId: 'container', type: 'Runtime' },
+    { id: 'self', fromNodeId: 'app', toNodeId: 'app', type: 'Dependency' },
+    { id: 'host-child', fromNodeId: 'host', toNodeId: 'app', type: 'Runtime' },
+  );
+  const graph = buildGraph(fixture);
+  const host = graph.cards.find(card => card.node.id === 'host');
+  assert.equal(host.routes.length, 5);
+  assert.equal(new Set(host.routes.map(route => route.railX)).size, 5);
+  const endpoints = host.routes.flatMap(route => [route.sourceY, route.targetY]);
+  assert.equal(new Set(endpoints).size, endpoints.length);
+  for (const route of host.routes) {
+    assert(route.railX > 500 && route.railX < host.width - 16);
+    for (const [id, y] of [[route.fromNodeId, route.sourceY], [route.toNodeId, route.targetY]]) {
+      const row = host.rows.get(id);
+      assert(y >= row.top + 60 && y < row.top + row.height - 10);
+    }
+  }
+  const filtered = buildGraph(fixture, { ...DEFAULT_FILTERS, Runtime: false, Dataflow: false, Dependency: false });
+  assert.equal(filtered.cards.find(card => card.node.id === 'host').width, 320);
+  assert.deepEqual(host.routes, buildGraph({ ...fixture, edges: [...fixture.edges].reverse() }).cards.find(card => card.node.id === 'host').routes);
+});
