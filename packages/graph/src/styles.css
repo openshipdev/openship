@@ -1,0 +1,53 @@
+@import "@xyflow/react/dist/style.css";
+
+.osg { --osg-bg: #fff; --osg-fg: #273242; --osg-muted: #667587; --osg-border: #cfd6df; --osg-surface: #f6f8fa; color: var(--osg-fg); background: var(--osg-bg); font: 13px/1.45 system-ui, sans-serif; border: 1px solid var(--osg-border); border-radius: 10px; overflow: hidden; }
+[data-theme="dark"] .osg { --osg-bg: #171d27; --osg-fg: #e3e9f1; --osg-muted: #a0acbe; --osg-border: #384353; --osg-surface: #202835; }
+.osg *, .osg *::before, .osg *::after { box-sizing: border-box; }
+.osg .osg-toolbar { display: flex; gap: 18px; flex-wrap: wrap; padding: 14px 16px; border-bottom: 1px solid var(--osg-border); align-items: center; }
+.osg fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.osg legend { font-size: 10px; color: var(--osg-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.osg label.osg-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border: 1px solid var(--osg-border); border-radius: 5px; font-size: 11px; cursor: pointer; }
+.osg .osg-chip:has(input:checked) { background: var(--osg-surface); }
+.osg label.osg-chip input { display: inline; margin: 0; padding: 0; width: 12px; height: 12px; accent-color: #2f71ff; }
+.osg .osg-actions { display: flex; gap: 6px; margin-left: auto; }
+.osg button { color: var(--osg-fg); background: var(--osg-bg); border: 1px solid var(--osg-border); border-radius: 5px; padding: 7px 10px; cursor: pointer; font: inherit; }
+.osg button:hover { background: var(--osg-surface); }
+.osg button:focus-visible { outline: 2px solid #2f71ff; outline-offset: 3px; }
+.osg button:disabled { opacity: .5; cursor: wait; }
+.osg-canvas { height: 640px; background: var(--osg-surface); }
+.osg .osg-card { position: relative; height: 100%; border: 1px solid var(--osg-border); border-radius: 9px; padding: 18px 15px; background: var(--osg-bg); box-shadow: 0 2px 8px #00000008; }
+.osg .osg-component { position: relative; min-height: 72px; }
+.osg .osg-nested { border: 1px solid var(--osg-border); border-radius: 6px; background: var(--osg-surface); padding: 10px; margin-top: 0; height: 72px; }
+.osg .osg-badge { position: absolute; top: -36px; left: 0; padding: 3px 8px; border-radius: 5px 5px 0 0; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; background: #737e8e; color: white; }
+.osg .osg-nested .osg-badge { top: -20px; left: 8px; padding: 2px 7px; }
+.osg .osg-badge-host { background: #2f71ff; }
+.osg .osg-badge-process { background: #3faf60; }
+.osg .osg-badge-container { background: #b98920; }
+.osg .osg-badge-library { background: #7f63d2; }
+.osg button.osg-name { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; border: 0; background: transparent; font-size: 13px; font-weight: 650; text-align: left; }
+.osg .osg-selected > .osg-name { color: #2f71ff; text-decoration: underline; text-underline-offset: 3px; }
+.osg .osg-meta { font-size: 10px; color: var(--osg-muted); margin: 3px 2px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.osg button.osg-context { background: transparent; color: var(--osg-muted); border: 0; padding: 0 2px; font-size: 10px; }
+.osg .react-flow__handle { width: 6px; height: 6px; background: var(--osg-muted); border: 1px solid var(--osg-bg); }
+.osg .osg-root { height: 100%; border: 3px double var(--osg-border); border-radius: 14px; padding: 22px; background: var(--osg-bg); }
+.osg .osg-root > .osg-component { width: 300px; }
+.osg .osg-root .osg-badge { top: -43px; }
+.osg .react-flow__controls button { border: 0; border-bottom: 1px solid var(--osg-border); border-radius: 0; padding: 5px; width: 28px; height: 28px; fill: var(--osg-fg); }
+.osg .react-flow__edge-path { opacity: .8; }
+.osg-status { padding: 9px 16px; color: var(--osg-muted); font-size: 11px; border-top: 1px solid var(--osg-border); }
+.osg:fullscreen { display: flex; flex-direction: column; border: 0; border-radius: 0; padding: 24px; }
+.osg:fullscreen .osg-canvas { flex: 1; min-height: 0; }
+@media (max-width: 700px) { .osg-canvas { height: 520px; } .osg .osg-toolbar { gap: 10px; } .osg .osg-actions { margin-left: 0; } }
+/* Read-only React Flow nodes disable pointer events; embedded actions opt in. */
+.osg .osg-component button { pointer-events: auto; }
+
+.osg .react-flow__node-component { cursor: grab; }
+.osg .react-flow__node-component.dragging { cursor: grabbing; }
+
+/* Compact connection labels occupy gaps, above the next component badge. */
+.osg .osg-card .react-flow__handle { top: 36px; }
+.osg-internal-connections { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.osg-internal-path { fill: none; stroke: var(--osg-muted); stroke-width: 1.5; stroke-linejoin: round; }
+.osg-internal-label { display: inline-block; max-width: 220px; height: 20px; padding: 2px 6px; border-radius: 4px; background: var(--osg-bg); color: var(--osg-fg); font-size: 10px; line-height: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: auto; }
+
+.osg-internal-labels { display: flex; flex-direction: column; align-items: center; }

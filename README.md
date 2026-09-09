@@ -28,3 +28,19 @@ The production site publishes only the Sources capability:
 
 `openship.sources.json` is the fail-closed publication allowlist. The site build generates the
 served Manifest and Bundle from that exact list and refuses unsafe or secret-shaped paths.
+
+
+## Browser viewer
+
+`/view?url=https%3A%2F%2Fexample.com` opens a public OpenShip provider directly in the browser.
+The viewer validates discovery and prefers Systems, using its embedded Sources for both views.
+A failed Systems load offers an explicit Sources fallback. There is no backend URL-fetch proxy,
+account, database, or uploaded project. Providers must allow CORS, including on redirects;
+use the final canonical site URL when a hosting-level redirect does not supply CORS headers.
+
+Share a selection with `view=sources|system`, `panel=architecture|connections|context`, and
+`node` or `file`. Source files and context are displayed as text, never executed. Optional
+numeric `metadata.order` affects diagram ordering; all conformant v1 graphs work without it.
+The current browser limits are 1 MiB discovery, 64 MiB per document, 32 MiB decoded Sources,
+30 seconds per request, and 2,000 nodes / 10,000 connections for diagrams. Loopback HTTP is
+available only in development. Run `pnpm test:viewer` for loader, validation and URL-state tests.

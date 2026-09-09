@@ -9,6 +9,8 @@
   "files": [
     ".github/workflows/protocol-release.yml",
     ".gitignore",
+    "AGENTS.md",
+    "CLAUDE.md",
     "README.md",
     "app/.well-known/openship.json/route.js",
     "app/[spec]/route.js",
@@ -21,12 +23,23 @@
     "app/page.js",
     "app/skill/[...path]/route.js",
     "app/theme-toggle.js",
+    "app/view/page.js",
+    "app/view/viewer.css",
     "components/markdown-document.js",
+    "components/openship-viewer.js",
     "components/site-shell.js",
+    "components/viewer-system.js",
     "lib/openship-http.js",
     "lib/protocol.js",
+    "lib/viewer.js",
     "openship.sources.json",
     "package.json",
+    "packages/graph/README.md",
+    "packages/graph/package.json",
+    "packages/graph/src/index.jsx",
+    "packages/graph/src/model.js",
+    "packages/graph/src/styles.css",
+    "packages/graph/test/model.test.mjs",
     "packages/protocol/.gitignore",
     "packages/protocol/README.md",
     "packages/protocol/bin/openship.mjs",
@@ -73,6 +86,7 @@
     "skills/openship/references/schemas/discovery.schema.json",
     "skills/openship/references/schemas/sources-bundle.schema.json",
     "skills/openship/references/schemas/sources-manifest.schema.json",
-    "skills/openship/references/schemas/systems.schema.json"
+    "skills/openship/references/schemas/systems.schema.json",
+    "test/viewer.test.mjs"
   ]
 }
