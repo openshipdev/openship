@@ -74,28 +74,43 @@ test('renderer measurements survive non-dimension updates and only change on res
   assert.equal(updateMeasurements(resized, [{ type: 'dimensions', id: 'host', dimensions: { width: NaN, height: 0 } }]), resized);
 });
 
-test('internal wiring reserves clear lanes and unique ports for parallel, reverse and self edges', () => {
+test('internal links exit right, cross the gap, and enter from the left', () => {
+  const fixture = structuredClone(system);
+  fixture.edges = [{ id: 'down', fromNodeId: 'app', toNodeId: 'container', type: 'Runtime' }];
+  const host = buildGraph(fixture).cards.find(card => card.node.id === 'host');
+  const route = host.routes[0];
+  const [a, b, c, d, e, f] = route.points;
+  assert(b[0] > a[0] && b[1] === a[1]);
+  assert(c[0] === b[0] && c[1] > b[1]);
+  assert(d[0] < c[0] && d[1] === c[1]);
+  assert(e[0] === d[0] && e[1] > d[1]);
+  assert(f[0] > e[0] && f[1] === e[1]);
+  assert.equal(host.width, 344);
+  assert(host.height <= 340);
+});
+
+test('parallel, reverse, self and skipped-row connections have clear labels and side rails', () => {
   const fixture = structuredClone(system);
   fixture.edges.push(
     { id: 'parallel', fromNodeId: 'container', toNodeId: 'app', type: 'Runtime' },
     { id: 'reverse', fromNodeId: 'app', toNodeId: 'container', type: 'Runtime' },
     { id: 'self', fromNodeId: 'app', toNodeId: 'app', type: 'Dependency' },
-    { id: 'host-child', fromNodeId: 'host', toNodeId: 'app', type: 'Runtime' },
+    { id: 'skip', fromNodeId: 'host', toNodeId: 'container', type: 'Runtime' },
   );
-  const graph = buildGraph(fixture);
-  const host = graph.cards.find(card => card.node.id === 'host');
+  const host = buildGraph(fixture).cards.find(card => card.node.id === 'host');
   assert.equal(host.routes.length, 5);
-  assert.equal(new Set(host.routes.map(route => route.railX)).size, 5);
-  const endpoints = host.routes.flatMap(route => [route.sourceY, route.targetY]);
-  assert.equal(new Set(endpoints).size, endpoints.length);
+  assert([...host.rows.values()].every(row => row.height === 72));
+  assert.equal(new Set(host.routes.map(route => route.labelY)).size, 5);
   for (const route of host.routes) {
-    assert(route.railX > 500 && route.railX < host.width - 16);
-    for (const [id, y] of [[route.fromNodeId, route.sourceY], [route.toNodeId, route.targetY]]) {
-      const row = host.rows.get(id);
-      assert(y >= row.top + 60 && y < row.top + row.height - 10);
-    }
+    const rows = [...host.rows.values()];
+    assert(route.labelY - 10 >= rows[route.upper].top + 72);
+    const next = rows[route.upper + 1];
+    assert(route.labelY + 10 < (next ? next.top - 20 : host.height));
+    const left = rows[0].left;
+    assert(route.points[1][0] > left + 288 && route.points[1][0] < host.width);
+    assert(route.points[3][0] > 0 && route.points[3][0] < left);
   }
+  assert.deepEqual(host.routes, buildGraph({ ...fixture, edges: [...fixture.edges].reverse() }).cards.find(card => card.node.id === 'host').routes);
   const filtered = buildGraph(fixture, { ...DEFAULT_FILTERS, Runtime: false, Dataflow: false, Dependency: false });
   assert.equal(filtered.cards.find(card => card.node.id === 'host').width, 320);
-  assert.deepEqual(host.routes, buildGraph({ ...fixture, edges: [...fixture.edges].reverse() }).cards.find(card => card.node.id === 'host').routes);
 });

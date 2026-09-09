@@ -5,7 +5,7 @@ import { ReactFlow, Background, Controls, Handle, MarkerType, Position } from "@
 import { autoLayout, buildGraph, DEFAULT_FILTERS, gridPositions, updateMeasurements } from "./model.js";
 
 function ComponentRow({ node, selected, onSelect, onContext, nested = false, row }) {
-  return <div className={`osg-component ${nested ? "osg-nested" : ""} ${selected === node.id ? "osg-selected" : ""}`} style={row ? { position: "absolute", top: row.top, left: 15, width: 288, height: row.height } : undefined}>
+  return <div className={`osg-component ${nested ? "osg-nested" : ""} ${selected === node.id ? "osg-selected" : ""}`} style={row ? { position: "absolute", top: row.top, left: row.left, width: 288, height: row.height } : undefined}>
     <span className={`osg-badge osg-badge-${node.kind.toLowerCase()}`}>{node.kind === "Root" ? "System" : node.kind}</span>
     <Handle type="target" position={Position.Left} id={`in:${node.id}`} isConnectable={false} />
     <Handle type="source" position={Position.Right} id={`out:${node.id}`} isConnectable={false} />
@@ -25,9 +25,8 @@ function Card({ data }) {
       {data.routes.map((route) => <g key={route.id}>
         <title>{`${route.fromNodeId} → ${route.toNodeId}: ${route.label}`}</title>
         <path className="osg-internal-path" d={route.path} markerEnd={`url(#${markerId})`} strokeDasharray={route.type === "Dependency" ? "5 4" : undefined} />
-        <circle cx="304" cy={route.sourceY} r="2.5" fill="var(--osg-muted)" />
-        <foreignObject x="320" y={route.sourceY - 10} width="180" height="20"><div className="osg-internal-label" title={route.label}>{route.label}</div></foreignObject>
       </g>)}
+      {data.routes.map((route) => <foreignObject key={route.id} x={route.labelX} y={route.labelY - 10} width={route.labelWidth} height="20"><div className="osg-internal-labels"><div className="osg-internal-label" title={route.label}>{route.label}</div></div></foreignObject>)}
     </svg>}
   </div>;
 }

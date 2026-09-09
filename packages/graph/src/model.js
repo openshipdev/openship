@@ -52,34 +52,51 @@ export function buildGraph(system, filters = DEFAULT_FILTERS) {
   return { root: byId.get(system.rootNodeId), cards, edges, included };
 }
 
-// Internal connections have their own right-hand gutter. Every endpoint gets a
-// separate vertical slot, including parallel edges, reverse edges and self loops.
+// Exit right, cross a reserved inter-row gap, and enter the target from the
+// left. Side rails stay inside the host; labels never share space with badges.
 export function layoutCard(card, edges) {
+  const nodes = [card.node, ...card.children];
+  const order = new Map(nodes.map((node, index) => [node.id, index]));
   const internal = edges.filter((edge) => edge.source === card.node.id && edge.target === card.node.id)
     .sort((a, b) => a.id.localeCompare(b.id));
+  const occupied = [];
+  const connections = internal.map((edge) => {
+    const from = order.get(edge.fromNodeId), to = order.get(edge.toNodeId);
+    const upper = Math.min(from, to), lower = Math.max(from, to);
+    let lane = occupied.findIndex((intervals) => intervals.every(([start, end]) => lower < start || upper > end));
+    if (lane === -1) { lane = occupied.length; occupied.push([]); }
+    occupied[lane].push([upper, lower]);
+    return { ...edge, upper, lower, lane };
+  });
+  const extra = Math.max(0, occupied.length - 1) * 8;
+  const width = internal.length ? 344 + extra * 2 : 320;
+  const left = internal.length ? 27 + extra : 15;
   const rows = new Map();
   let top = 18;
-  for (const node of [card.node, ...card.children]) {
-    const ports = [];
-    for (const edge of internal) {
-      if (edge.fromNodeId === node.id) ports.push({ edgeId: edge.id, type: "source" });
-      if (edge.toNodeId === node.id) ports.push({ edgeId: edge.id, type: "target" });
-    }
-    const height = Math.max(72, 60 + ports.length * 24);
-    rows.set(node.id, { top, height, ports: ports.map((port, index) => ({ ...port, y: top + 60 + index * 24 })) });
-    top += height + 26;
+  for (const [index, node] of nodes.entries()) {
+    rows.set(node.id, { top, left, height: 72 });
+    const crossing = connections.filter((edge) => edge.upper === index);
+    crossing.forEach((edge, slot) => { edge.labelY = top + 72 + 14 + slot * 22; });
+    top += 72 + (crossing.length ? 52 + (crossing.length - 1) * 22 : 26);
   }
-  const routes = internal.map((edge, index) => {
-    const sourceY = rows.get(edge.fromNodeId).ports.find((port) => port.edgeId === edge.id && port.type === "source").y;
-    const targetY = rows.get(edge.toNodeId).ports.find((port) => port.edgeId === edge.id && port.type === "target").y;
-    const railX = 516 + index * 18;
-    const direction = Math.sign(targetY - sourceY);
-    const label = [edge.type, edge.metadata?.protocol].filter(Boolean).join(" · ");
-    return { ...edge, sourceY, targetY, railX, label,
-      path: `M 304 ${sourceY} H ${railX - 8} Q ${railX} ${sourceY} ${railX} ${sourceY + direction * 8} V ${targetY - direction * 8} Q ${railX} ${targetY} ${railX - 8} ${targetY} H 308`,
+  const routes = connections.map((edge) => {
+    const sourceY = rows.get(edge.fromNodeId).top + 36;
+    const targetY = rows.get(edge.toNodeId).top + 36;
+    const sourceX = left + 289, targetX = left - 1;
+    const rightRail = width - 12 - edge.lane * 8;
+    const leftRail = 12 + edge.lane * 8;
+    const y = edge.labelY;
+    const first = Math.sign(y - sourceY), second = Math.sign(targetY - y);
+    const points = [[sourceX, sourceY], [rightRail, sourceY], [rightRail, y], [leftRail, y], [leftRail, targetY], [targetX, targetY]];
+    const path = `M ${sourceX} ${sourceY} H ${rightRail - 5} Q ${rightRail} ${sourceY} ${rightRail} ${sourceY + first * 5} V ${y - first * 5} Q ${rightRail} ${y} ${rightRail - 5} ${y} H ${leftRail + 5} Q ${leftRail} ${y} ${leftRail} ${y + second * 5} V ${targetY - second * 5} Q ${leftRail} ${targetY} ${leftRail + 5} ${targetY} H ${targetX}`;
+    return { ...edge, sourceY, targetY, points, path,
+      label: [edge.type, edge.metadata?.protocol].filter(Boolean).join(" · "),
+      labelX: left + 34, labelWidth: 220,
     };
   });
-  return { rows, routes, width: internal.length ? 540 + (internal.length - 1) * 18 : 320, height: top - 26 + 18 };
+  const last = rows.get(nodes.at(-1).id);
+  const lastHasLoop = connections.some((edge) => edge.upper === nodes.length - 1);
+  return { rows, routes, width, height: lastHasLoop ? top : last.top + 72 + 18 };
 }
 
 export function gridPositions(cards) {
