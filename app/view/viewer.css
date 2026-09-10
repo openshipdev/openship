@@ -45,7 +45,6 @@
 .viewer-file-content header { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .viewer-file-content h2 { font-size: 1rem; overflow-wrap: anywhere; margin: 8px 0; }
 .viewer-code { padding: 20px; border: 1px solid var(--border); background: var(--surface); font-size: .78rem; line-height: 1.65; overflow: auto; max-height: 75vh; tab-size: 2; }
-.viewer-component-picker { margin: 18px 0; }
 .viewer-node-details { margin: 24px 0; padding: 20px; border: 1px solid var(--border); }
 .viewer-node-details h3 { margin-top: 0; }
 .viewer-source-links { max-height: 300px; overflow: auto; padding-left: 20px; }
@@ -75,8 +74,19 @@
   .viewer-toolbar select { width: 100%; }
 }
 
-.viewer-domain-filter { margin: 20px 0; padding: 16px; border: 1px solid var(--border); min-width: 0; }
-.viewer-domain-filter > div { display: flex; flex-wrap: wrap; gap: 12px 24px; }
-.viewer-domain-filter label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
-.viewer-domain-filter input { width: auto; margin: 0; }
+.viewer-system-zone { display: grid; gap: 20px; align-items: start; }
+.viewer-system-zone-with-domains { grid-template-columns: 220px minmax(0, 1fr); }
+.viewer-system-panel { min-width: 0; }
+.viewer-domain-filter { margin: 0; padding: 12px; border: 1px solid var(--border); min-width: 0; }
+.viewer-domain-filter legend { padding: 0 6px; font-size: .8rem; }
+.viewer-domain-filter > div { display: grid; gap: 8px; }
+.viewer-domain-filter button { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; overflow-wrap: anywhere; font-size: .8rem; }
+.viewer-domain-filter button[aria-pressed="true"] { background: var(--surface); border-color: var(--foreground); }
+.viewer-domain-filter button[aria-pressed="false"] { color: var(--muted); }
+.viewer-domain-filter button span { flex-shrink: 0; width: 1em; text-align: center; }
+.viewer-domain-filter button:focus-visible { outline: 2px solid var(--foreground); outline-offset: 2px; }
 .viewer-domain-filter p { margin-bottom: 0; }
+@media (max-width: 700px) {
+  .viewer-system-zone-with-domains { grid-template-columns: 1fr; }
+  .viewer-domain-filter > div { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+}

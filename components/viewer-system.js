@@ -16,11 +16,10 @@ function Metadata({ value }) {
 
 function Connections({ system, onSelect }) {
   const [type, setType] = useState("");
-  const [component, setComponent] = useState("");
   const nodes = new Map(system.nodes.map((node) => [node.id, node]));
-  const edges = system.edges.filter((edge) => (!type || edge.type === type) && (!component || edge.fromNodeId === component || edge.toNodeId === component));
+  const edges = system.edges.filter((edge) => !type || edge.type === type);
   return <section aria-label="System connections">
-    <div className="viewer-toolbar"><label>Connection type <select value={type} onChange={(e) => setType(e.target.value)}><option value="">All types</option>{["Runtime", "Dataflow", "Dependency"].map((item) => <option key={item}>{item}</option>)}</select></label><label>Component <select value={component} onChange={(e) => setComponent(e.target.value)}><option value="">All components</option>{system.nodes.map((node) => <option key={node.id} value={node.id}>{node.name}</option>)}</select></label></div>
+    <div className="viewer-toolbar"><label>Connection type <select value={type} onChange={(e) => setType(e.target.value)}><option value="">All types</option>{["Runtime", "Dataflow", "Dependency"].map((item) => <option key={item}>{item}</option>)}</select></label></div>
     <div className="viewer-table-scroll"><table><caption>{edges.length} connections. Arrows run from caller or producer to target.</caption><thead><tr><th>From</th><th>Type</th><th>To</th><th>Details</th></tr></thead><tbody>{edges.map((edge) => <tr key={edge.id}><td><button className="viewer-text-button" onClick={() => onSelect(edge.fromNodeId)}>{nodes.get(edge.fromNodeId)?.name}</button></td><td>{edge.type}</td><td><button className="viewer-text-button" onClick={() => onSelect(edge.toNodeId)}>{nodes.get(edge.toNodeId)?.name}</button></td><td><Metadata value={edge.metadata} /></td></tr>)}</tbody></table></div>
     {!edges.length && <p>No connections match these filters.</p>}
   </section>;
@@ -84,7 +83,6 @@ export default function SystemView({ snapshot, selection, onChange }) {
   const selectNode = (node) => onChange({ node });
   const openSource = (file) => onChange({ view: "sources", file });
   return <div>
-    {design.domains?.length > 0 && <fieldset className="viewer-domain-filter"><legend>Domains</legend><div>{design.domains.map((domain) => <label key={domain.id} title={domain.description}><input type="checkbox" checked={!selection.hiddenDomains?.includes(domain.id)} onChange={() => toggleDomain(domain.id)} />{domain.name}</label>)}</div><p className="viewer-muted">Shared blocks remain visible while any of their domains is selected. Blocks with no domain remain visible; parent boundaries are kept for visible blocks.</p></fieldset>}
     <div className="viewer-toolbar"><label>Design layer <select value={layer.id} onChange={(e) => switchLayer(e.target.value)}>{design.layers.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.role}</option>)}</select></label>
     <label>Instance <select value={instance?.id ?? ""} onChange={(e) => {
       const target = design.instances?.find((item) => item.id === e.target.value);
@@ -93,10 +91,14 @@ export default function SystemView({ snapshot, selection, onChange }) {
     {instance && <p className="viewer-muted">Supplied instance description: {instance.name}. Resource bindings are not verified live inventory.</p>}
     <div className="viewer-tabs" aria-label="System views">{["architecture", "connections", "context"].map((panel) => <button key={panel} aria-pressed={selection.panel === panel} onClick={() => onChange({ panel })}>{panel[0].toUpperCase() + panel.slice(1)}</button>)}</div>
     <p className="viewer-muted">{system.name} · {system.nodes.length} components · {system.edges.length} connections. This describes the provider’s design, not live service health.</p>
-    <label className="viewer-component-picker">Component <select value={selection.node} onChange={(e) => selectNode(e.target.value)}>{system.nodes.map((node) => <option key={node.id} value={node.id}>{node.name} ({node.kind})</option>)}</select></label>
+    <div className={`viewer-system-zone${design.domains?.length ? " viewer-system-zone-with-domains" : ""}`}>
+    {design.domains?.length > 0 && <fieldset className="viewer-domain-filter"><legend>Domains</legend><div>{design.domains.map((domain) => <button type="button" key={domain.id} title={domain.description} aria-pressed={!selection.hiddenDomains?.includes(domain.id)} onClick={() => toggleDomain(domain.id)}><span aria-hidden="true">{selection.hiddenDomains?.includes(domain.id) ? "−" : "✓"}</span>{domain.name}</button>)}</div><p className="viewer-muted">Shared blocks remain visible while any of their domains is selected. Blocks with no domain remain visible; parent boundaries are kept for visible blocks.</p></fieldset>}
+    <div className="viewer-system-panel">
     {selection.panel === "architecture" && <SystemGraph key={system.id} system={graph} selectedNodeId={selection.node} onSelectNode={selectNode} onOpenContext={(node) => onChange({ node, panel: "context" })} />}
     {selection.panel === "connections" && <Connections key={system.id} system={system} onSelect={selectNode} />}
     {selection.panel === "context" && <Context key={system.id} system={system} selected={selection.node} onSource={openSource} />}
+    </div>
+    </div>
     <aside className="viewer-node-details" aria-label="Selected component" aria-live="polite"><h3>{selected.name}</h3><p>{selected.kind} · {selected.id}{selected.parentId ? ` · Parent: ${selected.parentId}` : ""}</p><Metadata value={selected.metadata} />
       {design.domains?.length > 0 && <p>Domains: {design.domains.filter((domain) => domain.nodeIds.includes(selected.id)).map((domain) => domain.name).join(", ") || "None"}</p>}
       <h4>Intended configuration</h4><Configuration entries={selected.configuration} />
