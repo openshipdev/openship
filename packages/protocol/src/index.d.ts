@@ -10,7 +10,7 @@ export interface SourcesManifest { openship: "1.0"; capability: "sources"; diges
 export interface SourcesBundle { openship: "1.0"; capability: "sources"; digest: string; files: Record<string, { encoding: OpenShipEncoding; content: string; [key: string]: unknown }>; [key: string]: unknown }
 export interface DiscoveryAgent { summary: string; instructions: string; skill: string; [key: string]: unknown }
 export interface DiscoveryDocument { openship: "1.0"; capability: "discovery"; project: { name: string; description: string; [key: string]: unknown }; agent: DiscoveryAgent; page?: string; capabilities: { sources: { description: string; manifest: string; bundle: string; mcp?: string; [key: string]: unknown }; systems?: { description: string; document: string; [key: string]: unknown }; changes?: { description: string; policy: string; submit: string; status: string; [key: string]: unknown }; [key: string]: unknown }; [key: string]: unknown }
-export type SystemsNodeKind = "Root" | "Block" | "Store" | "Host" | "Container" | "Process" | "Library";
+export type SystemsNodeKind = "Root" | "Block" | "Store" | "Host" | "Container" | "Process" | "Contract" | "Library";
 export type SystemsNodeOwnership = "first_party" | "third_party";
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 export interface SystemsConfiguration { name: string; description: string; required: boolean; sensitive?: boolean; value?: JsonValue; secretRef?: { nodeId: string; key: string }; }

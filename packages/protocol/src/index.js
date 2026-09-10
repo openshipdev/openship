@@ -299,7 +299,7 @@ export function validateSystems(value, options = {}) {
       const path = `${at}.nodes[${i}]`, node = object(rawNode, path);
       identifier(node.id, `${path}.id`);
       if (nodeById.has(node.id)) fail(`${path}.id`, "must be globally unique");
-      if (!["Root", "Block", "Store", "Host", "Container", "Process", "Library"].includes(node.kind)) fail(`${path}.kind`, "invalid node kind");
+      if (!["Root", "Block", "Store", "Host", "Container", "Process", "Contract", "Library"].includes(node.kind)) fail(`${path}.kind`, "invalid node kind");
       string(node.name, `${path}.name`);
       const metadata = object(node.metadata, `${path}.metadata`);
       if (!["first_party", "third_party"].includes(metadata.ownership)) fail(`${path}.metadata.ownership`, "must be first_party or third_party");

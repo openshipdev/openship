@@ -22,7 +22,8 @@
 .osg .osg-badge { position: absolute; top: -36px; left: 0; padding: 3px 8px; border-radius: 5px 5px 0 0; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; background: #737e8e; color: white; }
 .osg .osg-nested .osg-badge { top: -20px; left: 8px; padding: 2px 7px; }
 .osg .osg-badge-host { background: #2f71ff; }
-.osg .osg-badge-process { background: #3faf60; }
+.osg .osg-badge-process,
+.osg .osg-badge-contract { background: #3faf60; }
 .osg .osg-badge-container { background: #b98920; }
 .osg .osg-badge-library { background: #7f63d2; }
 .osg button.osg-name { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; border: 0; background: transparent; font-size: 13px; font-weight: 650; text-align: left; }

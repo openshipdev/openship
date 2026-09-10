@@ -80,3 +80,16 @@ for (const [name, change] of [
   ['unknown domain member', d => { d.system.domains[0].nodeIds.push('missing'); }],
   ['invalid domain description', d => { d.system.domains[0].description = 123; }],
 ]) test(`rejects ${name}`, () => { const d = fresh(); change(d); assert.throws(() => validateSystems(d)); });
+
+test('Contract uses Process graph and binding rules, without Store state', () => {
+  const d = fresh();
+  for (const layer of d.system.layers) {
+    for (const node of layer.nodes) if (node.kind === 'Process') node.kind = 'Contract';
+  }
+  assert.equal(validateSystems(d), d);
+  const binding = d.system.instances[0].bindings[0];
+  const node = d.system.layers.flatMap(layer => layer.nodes).find(node => node.id === binding.nodeId);
+  assert.equal(node.kind, 'Contract');
+  binding.state = {};
+  assert.throws(() => validateSystems(d), /Store/);
+});
