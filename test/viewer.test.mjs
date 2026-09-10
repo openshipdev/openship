@@ -47,7 +47,7 @@ test("Systems uses embedded Sources without separately fetching a different snap
 });
 
 test("invalid Systems offers explicit fallback without silently loading Sources", async () => {
-  const source = provider({ systems: true, mutate: (doc) => { doc.system.edges[0].toNodeId = "missing"; } });
+  const source = provider({ systems: true, mutate: (doc) => { doc.system.layers[0].edges[0].toNodeId = "missing"; } });
   await assert.rejects(loadProvider("https://example.com", source), (error) => error.code === "validation" && error.sourcesAvailable);
   assert.equal(source.calls.length, 2);
   const result = await loadProvider("https://example.com", { ...source, preferSources: true });
@@ -61,10 +61,10 @@ test("corrupt Sources cannot be displayed as verified", async () => {
 });
 
 test("optional context is not required; opaque metadata and text are preserved", async () => {
-  const source = provider({ systems: true, mutate: (doc) => { delete doc.system.context; doc.system.nodes[0].metadata.custom = "<script>alert(1)</script>"; } });
+  const source = provider({ systems: true, mutate: (doc) => { delete doc.system.context; doc.system.layers[0].nodes[0].metadata.custom = "<script>alert(1)</script>"; } });
   const result = await loadProvider("https://example.com", source);
   assert.equal(result.system.context, undefined);
-  assert.equal(result.system.nodes[0].metadata.custom, "<script>alert(1)</script>");
+  assert.equal(result.system.layers[0].nodes[0].metadata.custom, "<script>alert(1)</script>");
 });
 
 test("rejects context hash corruption", async () => {
@@ -108,19 +108,19 @@ test("validates capability URLs before fetching them", async () => {
 
 test("restores shareable selections with safe defaults", async () => {
   const result = await loadProvider("https://example.com", provider({ systems: true }));
-  const state = { view: "system", panel: "context", node: "p.web", file: "app/page.js" };
+  const state = { view: "system", panel: "context", node: "p.web", file: "app/page.js", layer: "technical", instance: "", hiddenDomains: [] };
   assert.deepEqual(resolveSelection(new URLSearchParams(selectionQuery(result.origin, state)), result), state);
-  assert.deepEqual(resolveSelection(new URLSearchParams("view=invalid&panel=bad&node=unknown&file=missing"), result), { view: "system", panel: "architecture", node: "s.root", file: "app/page.js" });
+  assert.deepEqual(resolveSelection(new URLSearchParams("view=invalid&panel=bad&node=unknown&file=missing"), result), { view: "system", panel: "architecture", node: "s.root", file: "app/page.js", layer: "technical", instance: "", hiddenDomains: [] });
   assert.equal(resolveSelection(new URLSearchParams("view=system"), { ...result, system: null }).view, "sources");
 });
 
 test("source selectors resolve only verified files and graph layout is deterministic", async () => {
   const result = await loadProvider("https://example.com", provider({ systems: true }));
-  const node = result.system.nodes.find((item) => item.id === "p.web");
+  const node = result.system.layers[0].nodes.find((item) => item.id === "p.web");
   assert.deepEqual(nodeSourceFiles(node, result.verified.files).map((item) => item.metadata.path), ["app/page.js"]);
-  const layout = layoutSystem(result.system);
-  assert.deepEqual(layout, layoutSystem({ ...result.system, nodes: [...result.system.nodes].reverse() }));
-  assert.equal(layout.boxes.length, result.system.nodes.length);
+  const layout = layoutSystem(result.system.layers[0]);
+  assert.deepEqual(layout, layoutSystem({ ...result.system.layers[0], nodes: [...result.system.layers[0].nodes].reverse() }));
+  assert.equal(layout.boxes.length, result.system.layers[0].nodes.length);
   for (const box of layout.boxes) {
     assert.ok(box.x + box.width <= layout.width);
     assert.ok(box.y + box.height <= layout.height);
@@ -137,4 +137,41 @@ test("calls native browser fetch with its global receiver", async () => {
   };
   try { assert.equal((await loadProvider("https://example.com")).verified.files.length, 2); }
   finally { globalThis.fetch = original; }
+});
+
+test('layer and instance navigation round trips and resets invalid selections', async () => {
+  const { changeSystemLayer } = await import('../lib/viewer.js');
+  const document = await fixture('systems-layered');
+  const snapshot = { system: document.system, verified: { files: [] } };
+  const state = resolveSelection(new URLSearchParams('instance=production&node=provider.data'), snapshot);
+  assert.equal(state.layer, 'provider');
+  assert.equal(state.instance, 'production');
+  assert.deepEqual(resolveSelection(new URLSearchParams(selectionQuery('https://example.com', state)), snapshot), state);
+  assert.deepEqual(changeSystemLayer(document.system, state, 'technical'), { layer: 'technical', instance: '', node: 'technical.data' });
+  document.system.refinements.push({ id: 'another', fromNodeId: 'provider.data', toNodeId: 'p.web' });
+  assert.equal(changeSystemLayer(document.system, state, 'technical').node, 's.root');
+  const reset = resolveSelection(new URLSearchParams('layer=missing&instance=missing&node=provider.data'), snapshot);
+  assert.equal(reset.layer, 'logical'); assert.equal(reset.node, 'logical.root'); assert.equal(reset.instance, '');
+});
+
+test('aggregate graph limits include nodes across layers and refinement links', async () => {
+  const source = provider({ systems: true, mutate: d => {
+    const root = { id: 'r', kind: 'Root', name: 'Root', metadata: { ownership: 'first_party' } };
+    d.system.layers.push({ id: 'extra', role: 'custom', name: 'Extra', rootNodeId: 'r', nodes: [root, ...Array.from({ length: 1997 }, (_, i) => ({ ...root, id: `extra.${i}`, kind: 'Block', parentId: 'r' }))], edges: [] });
+  } });
+  await assert.rejects(loadProvider('https://example.com', source), e => e.code === 'size');
+});
+
+test('domain filters default to all, survive URL round trips and reset hidden selections', async () => {
+  const { changeSystemLayer } = await import('../lib/viewer.js');
+  const { system } = await fixture('systems-layered');
+  const snapshot = { system, verified: { files: [] } };
+  assert.deepEqual(resolveSelection(new URLSearchParams(), snapshot).hiddenDomains, []);
+  const state = resolveSelection(new URLSearchParams('layer=logical&node=logical.web&hideDomain=web&hideDomain=web&hideDomain=unknown'), snapshot);
+  assert.equal(state.node, 'logical.root');
+  assert.deepEqual(state.hiddenDomains, ['web']);
+  assert.deepEqual(resolveSelection(new URLSearchParams(selectionQuery('https://example.com', state)), snapshot), state);
+  const shared = resolveSelection(new URLSearchParams('layer=technical&node=p.web&hideDomain=web'), snapshot);
+  assert.equal(shared.node, 'p.web');
+  assert.equal(changeSystemLayer(system, shared, 'logical').node, 'logical.root');
 });

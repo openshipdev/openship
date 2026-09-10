@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { validateSystems } from "../packages/protocol/src/index.js";
 
 import { createHash } from 'node:crypto'
 import { readdir, readFile } from 'node:fs/promises'
@@ -84,111 +85,6 @@ function validateSources(manifest, bundle) {
     const bytes = decodeEntry(entry)
     assert(bytes.length === file.size, `Size differs for ${file.path}`)
     assert(sha256(bytes) === file.sha256, `SHA-256 differs for ${file.path}`)
-  }
-}
-
-function assertAcyclic(ids, pairs, label) {
-  const outgoing = new Map(ids.map((id) => [id, []]))
-  const indegree = new Map(ids.map((id) => [id, 0]))
-  for (const [from, to] of pairs) {
-    if (!outgoing.has(from) || !outgoing.has(to)) continue
-    outgoing.get(from).push(to)
-    indegree.set(to, indegree.get(to) + 1)
-  }
-  const queue = [...ids].filter((id) => indegree.get(id) === 0)
-  let seen = 0
-  while (queue.length) {
-    const current = queue.shift()
-    seen += 1
-    for (const next of outgoing.get(current)) {
-      indegree.set(next, indegree.get(next) - 1)
-      if (indegree.get(next) === 0) queue.push(next)
-    }
-  }
-  assert(seen === ids.length, `${label} must be acyclic`)
-}
-
-function matchesSelector(selector, path) {
-  if (selector.endsWith('/**')) {
-    const prefix = selector.slice(0, -3)
-    return path === prefix || path.startsWith(`${prefix}/`)
-  }
-  return path === selector
-}
-
-function validateSystems(payload) {
-  const { manifest, bundle } = payload.source
-  validateSources(manifest, bundle)
-
-  const { system } = payload
-  const nodeById = new Map(system.nodes.map((node) => [node.id, node]))
-  assert(nodeById.size === system.nodes.length, 'Node IDs must be unique')
-  const roots = system.nodes.filter((node) => node.kind === 'Root')
-  assert(roots.length === 1, 'Systems requires exactly one Root')
-  assert(roots[0].id === system.rootNodeId, 'rootNodeId must reference the Root')
-  assert(roots[0].parentId === undefined, 'Root must not have a parent')
-
-  for (const node of system.nodes) {
-    assert(node.metadata && (node.metadata.ownership === 'first_party' || node.metadata.ownership === 'third_party'), `Node ${node.id} must declare metadata.ownership as first_party or third_party`)
-    const parent = node.parentId ? nodeById.get(node.parentId) : undefined
-    if (node.kind === 'Host') assert(parent?.kind === 'Root', `Host ${node.id} must have the Root parent`)
-    if (node.kind === 'Container') assert(parent?.kind === 'Host', `Container ${node.id} must have a Host parent`)
-    if (node.kind === 'Process') assert(parent?.kind === 'Host' || parent?.kind === 'Container', `Process ${node.id} must have a Host or Container parent`)
-    if (node.kind === 'Library') assert(node.parentId === undefined, `Library ${node.id} must not have a parent`)
-    for (const selector of node.sourceSelectors ?? []) {
-      assert(manifest.files.some((file) => matchesSelector(selector, file.path)), `Source selector ${selector} on ${node.id} does not resolve`)
-    }
-  }
-  assertAcyclic(system.nodes.map((node) => node.id), system.nodes.filter((node) => node.parentId).map((node) => [node.parentId, node.id]), 'Containment graph')
-
-  assert(new Set(system.edges.map((edge) => edge.id)).size === system.edges.length, 'Edge IDs must be unique')
-  for (const edge of system.edges) {
-    const from = nodeById.get(edge.fromNodeId)
-    const to = nodeById.get(edge.toNodeId)
-    assert(from && to, `Edge ${edge.id} references a missing node`)
-    assert(from.kind === 'Process', `Edge ${edge.id} must start at a Process`)
-    if (edge.type === 'Dependency') assert(to.kind === 'Library', `Dependency ${edge.id} must target a Library`)
-    else assert(to.kind === 'Process' || to.kind === 'Container', `${edge.type} ${edge.id} must target a Process or Container`)
-  }
-  const graphIds = system.nodes.map((node) => node.id)
-  assertAcyclic(graphIds, system.edges.filter((edge) => edge.type === 'Dataflow').map((edge) => [edge.fromNodeId, edge.toNodeId]), 'Dataflow graph')
-  assertAcyclic(graphIds, system.edges.filter((edge) => edge.type === 'Dependency').map((edge) => [edge.fromNodeId, edge.toNodeId]), 'Dependency graph')
-
-  const context = system.context
-  if (!context) return
-  const concerns = new Set(context.concerns ?? [])
-  const documents = new Map()
-  for (const document of context.documents ?? []) {
-    assert(document.hash === `sha256:${sha256(`${document.kind}\n${document.title}\n${document.language}\n${document.text}`)}`, `Document hash mismatch for ${document.title}`)
-    assert(!documents.has(document.hash), `Duplicate document ${document.hash}`)
-    documents.set(document.hash, document)
-  }
-
-  const supersedes = [...documents.values()].filter((document) => document.supersedes && documents.has(document.supersedes)).map((document) => [document.hash, document.supersedes])
-  assertAcyclic([...documents.keys()], supersedes, 'Document supersession graph')
-
-  for (const cell of context.matrix ?? []) {
-    assert(nodeById.has(cell.nodeId), `Matrix references missing node ${cell.nodeId}`)
-    assert(concerns.has(cell.concern), `Matrix references undeclared concern ${cell.concern}`)
-    for (const hash of cell.documentRefs ?? []) assert(documents.get(hash)?.kind === 'Document', `Matrix Document reference ${hash} has wrong kind or is missing`)
-    for (const hash of cell.skillRefs ?? []) assert(documents.get(hash)?.kind === 'Skill', `Matrix Skill reference ${hash} has wrong kind or is missing`)
-  }
-  for (const hash of context.systemPromptRefs ?? []) assert(documents.get(hash)?.kind === 'Prompt', `System prompt ${hash} has wrong kind or is missing`)
-
-  const artifactIds = new Set()
-  const sourcePaths = new Set(manifest.files.map((file) => file.path))
-  for (const artifact of context.artifacts ?? []) {
-    assert(!artifactIds.has(artifact.id), `Duplicate artifact ${artifact.id}`)
-    artifactIds.add(artifact.id)
-    assert(nodeById.has(artifact.nodeId), `Artifact ${artifact.id} references a missing node`)
-    assert(concerns.has(artifact.concern), `Artifact ${artifact.id} references an undeclared concern`)
-    if (artifact.type === 'Code') {
-      assert(Array.isArray(artifact.sourcePaths) && artifact.sourcePaths.length > 0, `Code artifact ${artifact.id} requires sourcePaths`)
-      for (const path of artifact.sourcePaths) assert(sourcePaths.has(path), `Code artifact ${artifact.id} references missing source ${path}`)
-      assert(artifact.text === undefined, `Code artifact ${artifact.id} must not duplicate source content`)
-    } else {
-      assert(typeof artifact.text === 'string', `${artifact.type} artifact ${artifact.id} requires text`)
-    }
   }
 }
 
