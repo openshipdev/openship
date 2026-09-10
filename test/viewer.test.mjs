@@ -108,9 +108,9 @@ test("validates capability URLs before fetching them", async () => {
 
 test("restores shareable selections with safe defaults", async () => {
   const result = await loadProvider("https://example.com", provider({ systems: true }));
-  const state = { view: "system", panel: "context", node: "p.web", file: "app/page.js", layer: "technical", instance: "" };
+  const state = { view: "system", panel: "context", node: "p.web", file: "app/page.js", layer: "technical", instance: "", hiddenDomains: [] };
   assert.deepEqual(resolveSelection(new URLSearchParams(selectionQuery(result.origin, state)), result), state);
-  assert.deepEqual(resolveSelection(new URLSearchParams("view=invalid&panel=bad&node=unknown&file=missing"), result), { view: "system", panel: "architecture", node: "s.root", file: "app/page.js", layer: "technical", instance: "" });
+  assert.deepEqual(resolveSelection(new URLSearchParams("view=invalid&panel=bad&node=unknown&file=missing"), result), { view: "system", panel: "architecture", node: "s.root", file: "app/page.js", layer: "technical", instance: "", hiddenDomains: [] });
   assert.equal(resolveSelection(new URLSearchParams("view=system"), { ...result, system: null }).view, "sources");
 });
 
@@ -160,4 +160,18 @@ test('aggregate graph limits include nodes across layers and refinement links', 
     d.system.layers.push({ id: 'extra', role: 'custom', name: 'Extra', rootNodeId: 'r', nodes: [root, ...Array.from({ length: 1997 }, (_, i) => ({ ...root, id: `extra.${i}`, kind: 'Block', parentId: 'r' }))], edges: [] });
   } });
   await assert.rejects(loadProvider('https://example.com', source), e => e.code === 'size');
+});
+
+test('domain filters default to all, survive URL round trips and reset hidden selections', async () => {
+  const { changeSystemLayer } = await import('../lib/viewer.js');
+  const { system } = await fixture('systems-layered');
+  const snapshot = { system, verified: { files: [] } };
+  assert.deepEqual(resolveSelection(new URLSearchParams(), snapshot).hiddenDomains, []);
+  const state = resolveSelection(new URLSearchParams('layer=logical&node=logical.web&hideDomain=web&hideDomain=web&hideDomain=unknown'), snapshot);
+  assert.equal(state.node, 'logical.root');
+  assert.deepEqual(state.hiddenDomains, ['web']);
+  assert.deepEqual(resolveSelection(new URLSearchParams(selectionQuery('https://example.com', state)), snapshot), state);
+  const shared = resolveSelection(new URLSearchParams('layer=technical&node=p.web&hideDomain=web'), snapshot);
+  assert.equal(shared.node, 'p.web');
+  assert.equal(changeSystemLayer(system, shared, 'logical').node, 'logical.root');
 });

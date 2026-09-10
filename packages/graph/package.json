@@ -6,7 +6,8 @@
   "private": true,
   "exports": {
     ".": "./src/index.jsx",
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./model": "./src/model.js"
   },
   "files": [
     "src",

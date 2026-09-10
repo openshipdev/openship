@@ -46,3 +46,5 @@ license, public API/types, and compiled distribution; remove `private` only when
 ready for release.
 
 The caller owns layer and instance selection. It may annotate each node with an optional `instanceBinding` (resource ID/configuration/state) for display; this is renderer input, not a protocol mutation. Shared context and refinement navigation belong to the caller.
+
+Use `filterLayerByDomains(layer, domains, hiddenDomainIds)` from `@openship/graph/model` to project a layer before rendering it. An empty hidden list shows all domains. Shared nodes remain visible if any of their domains is enabled; unassigned nodes remain visible. Required ancestors remain as boundaries, while connections to filtered-out endpoints are removed. The helper preserves the original document. The OpenShip viewer uses the same projection for its graph, component picker and connection list, and stores hidden domain IDs in repeated `hideDomain` URL parameters.

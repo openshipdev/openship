@@ -74,3 +74,9 @@
   .viewer-toolbar label { width: 100%; }
   .viewer-toolbar select { width: 100%; }
 }
+
+.viewer-domain-filter { margin: 20px 0; padding: 16px; border: 1px solid var(--border); min-width: 0; }
+.viewer-domain-filter > div { display: flex; flex-wrap: wrap; gap: 12px 24px; }
+.viewer-domain-filter label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.viewer-domain-filter input { width: auto; margin: 0; }
+.viewer-domain-filter p { margin-bottom: 0; }

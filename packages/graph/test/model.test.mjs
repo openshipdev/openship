@@ -123,3 +123,18 @@ test('logical blocks and stores render without hosts and keep nested library con
   assert.equal(graph.edges[0].source, 'capability');
   assert.equal(graph.edges[0].target, 'data');
 });
+
+test('domain filters use union membership, retain unassigned nodes and parent boundaries, and remove hidden connections', async () => {
+  const { filterLayerByDomains } = await import('../src/model.js');
+  const layer = { id: 'technical', rootNodeId: 'root', nodes: [node('root', 'Root'), node('host', 'Host', 'root'), node('a', 'Block', 'host'), node('shared', 'Store', 'host'), node('unassigned', 'Block', 'root')], edges: [{ id: 'call', type: 'Runtime', fromNodeId: 'a', toNodeId: 'shared' }, { id: 'host-call', type: 'Runtime', fromNodeId: 'host', toNodeId: 'shared' }] };
+  const domains = [{ id: 'web', nodeIds: ['host', 'a', 'shared'] }, { id: 'state', nodeIds: ['shared'] }];
+  const before = structuredClone(layer);
+  assert.equal(filterLayerByDomains(layer, domains), layer);
+  assert.equal(filterLayerByDomains(layer, [], ['web']), layer);
+  const filtered = filterLayerByDomains(layer, domains, ['web']);
+  assert.deepEqual(filtered.nodes.map(n => n.id), ['root', 'host', 'shared', 'unassigned']);
+  assert.deepEqual(filtered.edges, []);
+  assert.deepEqual(buildGraph(filtered).cards.map(c => c.node.id), ['host', 'unassigned']);
+  assert.deepEqual(filterLayerByDomains(layer, domains, ['web', 'state']).nodes.map(n => n.id), ['root', 'unassigned']);
+  assert.deepEqual(layer, before);
+});

@@ -1,3 +1,23 @@
+// Domain memberships are explicit across layers, independent of containment and refinement.
+export function filterLayerByDomains(layer, domains = [], hiddenDomainIds = []) {
+  if (!domains.length || !hiddenDomainIds.length) return layer;
+  const hidden = new Set(hiddenDomainIds), assigned = new Set(), enabled = new Set();
+  for (const domain of domains) for (const nodeId of domain.nodeIds) {
+    assigned.add(nodeId);
+    if (!hidden.has(domain.id)) enabled.add(nodeId);
+  }
+  const matches = new Set(layer.nodes.filter((node) => node.id === layer.rootNodeId || !assigned.has(node.id) || enabled.has(node.id)).map((node) => node.id));
+  const included = new Set(matches), byId = new Map(layer.nodes.map((node) => [node.id, node]));
+  for (const id of matches) {
+    let parent = byId.get(id)?.parentId;
+    while (parent && !included.has(parent)) {
+      included.add(parent);
+      parent = byId.get(parent)?.parentId;
+    }
+  }
+  return { ...layer, nodes: layer.nodes.filter((node) => included.has(node.id)), edges: layer.edges.filter((edge) => matches.has(edge.fromNodeId) && matches.has(edge.toNodeId)) };
+}
+
 // Adapted from anticlodex's topology model: retain ancestors when filtering,
 // nest processes/containers within their host, and route edges to child handles.
 export const DEFAULT_FILTERS = {

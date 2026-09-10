@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { changeSystemLayer, nodeSourceFiles } from "../lib/viewer";
 
+import { filterLayerByDomains } from "@openship/graph/model";
+
 import { SystemGraph } from "@openship/graph";
 
 const label = (value) => typeof value === "string" ? value : JSON.stringify(value);
@@ -56,8 +58,16 @@ export default function SystemView({ snapshot, selection, onChange }) {
   const { system: design, verified } = snapshot;
   const layer = design.layers.find((item) => item.id === selection.layer) ?? design.layers[0];
   const instance = design.instances?.find((item) => item.id === selection.instance && item.layerId === layer.id);
-  const system = useMemo(() => ({ ...layer, context: design.context }), [layer, design.context]);
-  const graph = useMemo(() => ({ ...layer, nodes: layer.nodes.map((node) => ({ ...node, instanceBinding: instance?.bindings.find((binding) => binding.nodeId === node.id) })) }), [layer, instance]);
+  const filtered = useMemo(() => filterLayerByDomains(layer, design.domains, selection.hiddenDomains), [layer, design.domains, selection.hiddenDomains]);
+  const system = useMemo(() => ({ ...filtered, context: design.context }), [filtered, design.context]);
+  const toggleDomain = (id) => {
+    const hidden = new Set(selection.hiddenDomains ?? []);
+    if (hidden.has(id)) hidden.delete(id); else hidden.add(id);
+    const hiddenDomains = [...hidden];
+    const visible = filterLayerByDomains(layer, design.domains, hiddenDomains);
+    onChange({ hiddenDomains, node: visible.nodes.some((node) => node.id === selection.node) ? selection.node : layer.rootNodeId });
+  };
+  const graph = useMemo(() => ({ ...filtered, nodes: filtered.nodes.map((node) => ({ ...node, instanceBinding: instance?.bindings.find((binding) => binding.nodeId === node.id) })) }), [filtered, instance]);
   const binding = instance?.bindings.find((item) => item.nodeId === selection.node);
   const switchLayer = (id) => onChange(changeSystemLayer(design, selection, id));
   const follow = (nodeId) => {
@@ -67,13 +77,14 @@ export default function SystemView({ snapshot, selection, onChange }) {
   const related = (direction) => [...new Set(design.refinements.filter((ref) => ref[direction === "implements" ? "fromNodeId" : "toNodeId"] === selection.node).map((ref) => ref[direction === "implements" ? "toNodeId" : "fromNodeId"]))];
   const mappings = (direction, title) => <section><h4>{title}</h4>{related(direction).length ? related(direction).map((id) => {
     const target = design.layers.find((item) => item.nodes.some((node) => node.id === id));
-    return <p key={id}><button className="viewer-text-button" onClick={() => follow(id)}>{target.nodes.find((node) => node.id === id).name} · {target.name} →</button></p>;
+    return <p key={id}><button className="viewer-text-button" disabled={!filterLayerByDomains(target, design.domains, selection.hiddenDomains).nodes.some((node) => node.id === id)} onClick={() => follow(id)}>{target.nodes.find((node) => node.id === id).name} · {target.name} →</button></p>;
   }) : <p className="viewer-muted">No mapping supplied.</p>}</section>;
   const selected = system.nodes.find((node) => node.id === selection.node);
   const sourceFiles = nodeSourceFiles(selected, verified.files);
   const selectNode = (node) => onChange({ node });
   const openSource = (file) => onChange({ view: "sources", file });
   return <div>
+    {design.domains?.length > 0 && <fieldset className="viewer-domain-filter"><legend>Domains</legend><div>{design.domains.map((domain) => <label key={domain.id} title={domain.description}><input type="checkbox" checked={!selection.hiddenDomains?.includes(domain.id)} onChange={() => toggleDomain(domain.id)} />{domain.name}</label>)}</div><p className="viewer-muted">Shared blocks remain visible while any of their domains is selected. Blocks with no domain remain visible; parent boundaries are kept for visible blocks.</p></fieldset>}
     <div className="viewer-toolbar"><label>Design layer <select value={layer.id} onChange={(e) => switchLayer(e.target.value)}>{design.layers.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.role}</option>)}</select></label>
     <label>Instance <select value={instance?.id ?? ""} onChange={(e) => {
       const target = design.instances?.find((item) => item.id === e.target.value);
@@ -87,6 +98,7 @@ export default function SystemView({ snapshot, selection, onChange }) {
     {selection.panel === "connections" && <Connections key={system.id} system={system} onSelect={selectNode} />}
     {selection.panel === "context" && <Context key={system.id} system={system} selected={selection.node} onSource={openSource} />}
     <aside className="viewer-node-details" aria-label="Selected component" aria-live="polite"><h3>{selected.name}</h3><p>{selected.kind} · {selected.id}{selected.parentId ? ` · Parent: ${selected.parentId}` : ""}</p><Metadata value={selected.metadata} />
+      {design.domains?.length > 0 && <p>Domains: {design.domains.filter((domain) => domain.nodeIds.includes(selected.id)).map((domain) => domain.name).join(", ") || "None"}</p>}
       <h4>Intended configuration</h4><Configuration entries={selected.configuration} />
       {instance && <section><h4>Instance binding</h4><p>Resource: {binding?.resourceId ?? "Unresolved"}</p><Configuration entries={binding?.configuration} />{selected.kind === "Store" && <><h4>Database instance state</h4>{binding?.state ? <Metadata value={binding.state} /> : <p>Not supplied. No database records are included.</p>}</>}</section>}
       {mappings("implements", "Implements")}{mappings("implementedBy", "Implemented by")}
