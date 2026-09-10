@@ -14,6 +14,7 @@
 .osg button:hover { background: var(--osg-surface); }
 .osg button:focus-visible { outline: 2px solid #2f71ff; outline-offset: 3px; }
 .osg button:disabled { opacity: .5; cursor: wait; }
+.osg .osg-toolbar-controls { flex-basis: 100%; min-width: 0; }
 .osg-canvas { height: 640px; background: var(--osg-surface); }
 .osg .osg-card { position: relative; height: 100%; border: 1px solid var(--osg-border); border-radius: 9px; padding: 18px 15px; background: var(--osg-bg); box-shadow: 0 2px 8px #00000008; }
 .osg .osg-component { position: relative; min-height: 72px; }

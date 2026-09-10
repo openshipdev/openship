@@ -41,7 +41,7 @@ const groups = [
 ];
 
 /** Controlled selection; only viewport, filters and temporary layout live here. */
-export function SystemGraph({ system, selectedNodeId, onSelectNode, onOpenContext, className = "" }) {
+export function SystemGraph({ system, selectedNodeId, onSelectNode, onOpenContext, toolbarControls, className = "" }) {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [positions, setPositions] = useState(null);
   const [measurements, setMeasurements] = useState(() => new Map());
@@ -128,6 +128,7 @@ export function SystemGraph({ system, selectedNodeId, onSelectNode, onOpenContex
   return <section ref={shell} className={`osg ${className}`} aria-label={`${system.name} architecture graph`}>
     <div className="osg-toolbar">{groups.map(([label, options]) => <fieldset key={label}><legend>{label}</legend>{options.map(([key, name]) => <label className="osg-chip" key={key}><input type="checkbox" checked={filters[key]} onChange={() => setFilters((value) => ({ ...value, [key]: !value[key] }))} />{name}</label>)}</fieldset>)}
       <div className="osg-actions"><button onClick={arrange} disabled={busy}>{busy ? "Arranging…" : "Auto layout"}</button><button onClick={toggleFullscreen}>{fullscreen ? "Exit fullscreen" : "Fullscreen"}</button></div>
+      {toolbarControls && <div className="osg-toolbar-controls">{toolbarControls}</div>}
     </div>
     <div className="osg-canvas"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onInit={(instance) => { flow.current = instance; }} fitView minZoom={0.05} maxZoom={2.5} nodesDraggable onNodesChange={moveNodes} onNodeDragStart={() => { generation.current += 1; setBusy(false); }} nodesConnectable={false} edgesReconnectable={false} edgesFocusable={false} nodesFocusable={false} elementsSelectable={false} deleteKeyCode={null}>
       <Background gap={14} size={1} color="#9aa5b533" /><Controls showInteractive={false} />

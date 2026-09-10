@@ -82,6 +82,7 @@ export default function SystemView({ snapshot, selection, onChange }) {
   const sourceFiles = nodeSourceFiles(selected, verified.files);
   const selectNode = (node) => onChange({ node });
   const openSource = (file) => onChange({ view: "sources", file });
+  const domainFilter = design.domains?.length > 0 ? <fieldset className="viewer-domain-filter"><legend>Domains</legend><div>{design.domains.map((domain) => <label className="osg-chip" key={domain.id} title={domain.description}><input type="checkbox" checked={!selection.hiddenDomains?.includes(domain.id)} onChange={() => toggleDomain(domain.id)} />{domain.name}</label>)}</div></fieldset> : null;
   return <div>
     <div className="viewer-toolbar"><label>Design layer <select value={layer.id} onChange={(e) => switchLayer(e.target.value)}>{design.layers.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.role}</option>)}</select></label>
     <label>Instance <select value={instance?.id ?? ""} onChange={(e) => {
@@ -91,10 +92,10 @@ export default function SystemView({ snapshot, selection, onChange }) {
     {instance && <p className="viewer-muted">Supplied instance description: {instance.name}. Resource bindings are not verified live inventory.</p>}
     <div className="viewer-tabs" aria-label="System views">{["architecture", "connections", "context"].map((panel) => <button key={panel} aria-pressed={selection.panel === panel} onClick={() => onChange({ panel })}>{panel[0].toUpperCase() + panel.slice(1)}</button>)}</div>
     <p className="viewer-muted">{system.name} · {system.nodes.length} components · {system.edges.length} connections. This describes the provider’s design, not live service health.</p>
-    <div className={`viewer-system-zone${design.domains?.length ? " viewer-system-zone-with-domains" : ""}`}>
-    {design.domains?.length > 0 && <fieldset className="viewer-domain-filter"><legend>Domains</legend><div>{design.domains.map((domain) => <button type="button" key={domain.id} title={domain.description} aria-pressed={!selection.hiddenDomains?.includes(domain.id)} onClick={() => toggleDomain(domain.id)}><span aria-hidden="true">{selection.hiddenDomains?.includes(domain.id) ? "−" : "✓"}</span>{domain.name}</button>)}</div><p className="viewer-muted">Shared blocks remain visible while any of their domains is selected. Blocks with no domain remain visible; parent boundaries are kept for visible blocks.</p></fieldset>}
+    <div className={`viewer-system-zone${domainFilter && selection.panel !== "architecture" ? " viewer-system-zone-with-domains" : ""}`}>
+    {selection.panel !== "architecture" && domainFilter}
     <div className="viewer-system-panel">
-    {selection.panel === "architecture" && <SystemGraph key={system.id} system={graph} selectedNodeId={selection.node} onSelectNode={selectNode} onOpenContext={(node) => onChange({ node, panel: "context" })} />}
+    {selection.panel === "architecture" && <SystemGraph key={system.id} toolbarControls={domainFilter} system={graph} selectedNodeId={selection.node} onSelectNode={selectNode} onOpenContext={(node) => onChange({ node, panel: "context" })} />}
     {selection.panel === "connections" && <Connections key={system.id} system={system} onSelect={selectNode} />}
     {selection.panel === "context" && <Context key={system.id} system={system} selected={selection.node} onSource={openSource} />}
     </div>
