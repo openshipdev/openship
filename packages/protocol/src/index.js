@@ -326,6 +326,16 @@ export function validateSystems(value, options = {}) {
     }
     for (const type of ["Dataflow", "Dependency"]) assertAcyclic([...local.keys()], edges.filter((edge) => edge.type === type).map((edge) => [edge.fromNodeId, edge.toNodeId]), `${at}.edges[${type}]`);
   }
+  const domains = array(system.domains === undefined ? [] : system.domains, "$.system.domains");
+  unique(domains.map((domain) => identifier(object(domain, "$.system.domains").id, "$.system.domains.id")), "$.system.domains");
+  for (const domain of domains) {
+    const at = `$.system.domains.${domain.id}`;
+    string(domain.name, `${at}.name`);
+    if (domain.description !== undefined) string(domain.description, `${at}.description`);
+    const members = array(domain.nodeIds, `${at}.nodeIds`);
+    unique(members, `${at}.nodeIds`);
+    for (const nodeId of members) if (!nodeById.has(nodeId)) fail(`${at}.nodeIds`, "must reference existing system nodes");
+  }
   const refinements = array(system.refinements, "$.system.refinements");
   unique(refinements.map((ref) => identifier(object(ref, "$.system.refinements").id, "$.system.refinements.id")), "$.system.refinements");
   for (const ref of refinements) {

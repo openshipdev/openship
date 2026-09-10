@@ -18,7 +18,7 @@ test('supports any positive number of layers, custom and repeated roles, many-to
   value.system.refinements.push({ id: 'split', fromNodeId: 'provider.web', toNodeId: 'logical.data' }, { id: 'combined', fromNodeId: 'provider.data', toNodeId: 'logical.data' });
   validateSystems(value);
   value.system.layers = [value.system.layers[1]];
-  value.system.refinements = []; value.system.instances = [];
+  value.system.refinements = []; value.system.instances = []; delete value.system.domains;
   validateSystems(value);
 });
 const invalid = [
@@ -59,3 +59,24 @@ test('Runtime cycles and explicit null configuration values are valid', () => {
   d.system.layers[2].nodes[2].configuration[0].value = null;
   validateSystems(d);
 });
+
+test('domains are optional and may overlap across layers or have no members', () => {
+  const d = fresh();
+  validateSystems(d);
+  d.system.domains.push({ id: 'empty', name: 'Empty', nodeIds: [], vendor: true });
+  assert.equal(validateSystems(d).system.domains.at(-1).vendor, true);
+  delete d.system.domains;
+  validateSystems(d);
+  d.system.domains = [];
+  validateSystems(d);
+});
+for (const [name, change] of [
+  ['null domains', d => { d.system.domains = null; }],
+  ['duplicate domain ID', d => { d.system.domains.push(d.system.domains[0]); }],
+  ['invalid domain ID', d => { d.system.domains[0].id = 'not an id'; }],
+  ['empty domain name', d => { d.system.domains[0].name = ''; }],
+  ['missing domain members', d => { delete d.system.domains[0].nodeIds; }],
+  ['duplicate domain member', d => { d.system.domains[0].nodeIds.push(d.system.domains[0].nodeIds[0]); }],
+  ['unknown domain member', d => { d.system.domains[0].nodeIds.push('missing'); }],
+  ['invalid domain description', d => { d.system.domains[0].description = 123; }],
+]) test(`rejects ${name}`, () => { const d = fresh(); change(d); assert.throws(() => validateSystems(d)); });

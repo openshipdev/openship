@@ -21,7 +21,8 @@ export interface SystemsLayer { id: string; name: string; role: "logical" | "tec
 export interface SystemsRefinement { id: string; fromNodeId: string; toNodeId: string; [key: string]: unknown }
 export interface SystemsBinding { nodeId: string; resourceId?: string; configuration?: SystemsConfiguration[]; state?: { appliedMigration?: string; snapshot?: { ref: string; capturedAt: string; digest?: string } }; [key: string]: unknown }
 export interface SystemsInstance { id: string; name: string; environment: string; layerId: string; bindings: SystemsBinding[]; [key: string]: unknown }
-export interface SystemsGraph { id: string; name: string; layers: SystemsLayer[]; refinements: SystemsRefinement[]; instances?: SystemsInstance[]; metadata?: Record<string, unknown>; context?: Record<string, unknown>; [key: string]: unknown }
+export interface SystemsDomain { id: string; name: string; description?: string; nodeIds: string[]; [key: string]: unknown }
+export interface SystemsGraph { id: string; name: string; layers: SystemsLayer[]; refinements: SystemsRefinement[]; domains?: SystemsDomain[]; instances?: SystemsInstance[]; metadata?: Record<string, unknown>; context?: Record<string, unknown>; [key: string]: unknown }
 export interface SystemsDocument { openship: "1.0"; capability: "systems"; systemsVersion: "2.0"; source: { manifest: SourcesManifest; bundle: SourcesBundle; [key: string]: unknown }; system: SystemsGraph; [key: string]: unknown }
 export interface VerifiedSourceFile { metadata: SourceFileMetadata; bytes: Uint8Array }
 export interface VerifiedSources { manifest: SourcesManifest; bundle: SourcesBundle; files: VerifiedSourceFile[]; decodedBytes: number }
