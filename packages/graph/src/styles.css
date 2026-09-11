@@ -18,7 +18,7 @@
 .osg .osg-select-controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 18px; margin-left: auto; min-width: 0; max-width: 100%; }
 .osg .osg-select { display: flex; flex-direction: column; gap: 6px; min-width: 0; max-width: 100%; font-size: 10px; color: var(--osg-muted); text-transform: uppercase; letter-spacing: .06em; }
 .osg .osg-select select { min-width: 0; max-width: 100%; min-height: 26px; padding: 4px 7px; border: 1px solid var(--osg-border); border-radius: 5px; color: var(--osg-fg); background: var(--osg-bg); font: 11px/1.45 system-ui, sans-serif; text-transform: none; letter-spacing: normal; cursor: pointer; }
-.osg .osg-select select:focus-visible { outline: 2px solid #2f71ff; outline-offset: 3px; }
+.osg .osg-select select:focus-visible { outline: 2px solid #2f71ff; outline-offset: -2px; }
 .osg-canvas { height: 640px; background: var(--osg-surface); }
 .osg .osg-card { position: relative; height: 100%; border: 1px solid var(--osg-border); border-radius: 9px; padding: 18px 15px; background: var(--osg-bg); box-shadow: 0 2px 8px #00000008; }
 .osg .osg-component { position: relative; min-height: 72px; }

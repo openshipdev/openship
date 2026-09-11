@@ -60,6 +60,13 @@ select {
   outline-offset: 4px;
 }
 
+/* Keep field focus outlines inside scrollable and clipped containers. */
+input:not([type="checkbox"], [type="radio"], [type="range"]):focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-offset: -2px;
+}
+
 .site-header,
 .site-footer,
 .home-shell {
