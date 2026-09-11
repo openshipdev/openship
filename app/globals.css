@@ -1084,3 +1084,14 @@ select:focus-visible {
     flex-basis: 100%;
   }
 }
+
+.project-summaries { min-width: 0; }
+.project-markdown { line-height: 1.5; overflow-wrap: anywhere; }
+.project-markdown > :first-child { margin-top: 0; }
+.project-markdown h1, .project-markdown h2, .project-markdown h3 { font-size: 1em; line-height: inherit; margin: 0.75em 0 0.25em; }
+.project-markdown p, .project-markdown ul, .project-markdown ol { margin: 0 0 0.5em; }
+.project-markdown pre, .project-markdown table { max-width: 100%; overflow-x: auto; }
+.project-markdown img { max-width: 100%; height: auto; }
+.project-summary-preview { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; max-height: 7.5em; overflow: hidden; }
+.summary-toggle { border: 0; background: transparent; padding: 0.5em 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
+.project-summaries details > summary { cursor: pointer; padding: 0.5em 0; }

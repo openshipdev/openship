@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ProjectSummaries from "./project-summaries";
 export default function ProjectCard({ project: p, children }) {
   return (
     <article className="project-card">
@@ -19,7 +20,7 @@ export default function ProjectCard({ project: p, children }) {
           {p.hidden && <span>Hidden</span>}
         </div>
       </div>
-      <p>{p.description}</p>
+      <ProjectSummaries project={p} />
       <div className="project-caption">
         <span>{new URL(p.origin).hostname}</span>
         <span>{p.hasFullBundle ? "Snapshot saved" : "Metadata only"}</span>

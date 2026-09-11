@@ -15,6 +15,13 @@
       "when": 1789073033945,
       "tag": "0001_many_killmonger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789170414036,
+      "tag": "0002_faulty_yellowjacket",
+      "breakpoints": true
     }
   ]
 }

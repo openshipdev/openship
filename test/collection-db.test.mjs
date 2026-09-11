@@ -90,6 +90,10 @@ test(
         const [p] = await db.select().from(projects);
         assert.equal(p.hasFullBundle, false);
         assert.equal(p.name, manifest.project.name);
+        for (const field of ["productDescription", "productSummary", "technicalDescription", "technicalSummary"]) {
+          assert.equal(p[field], manifest.project[field]);
+          assert.equal((await listProjects()).items[0][field], manifest.project[field]);
+        }
         assert.equal(puts, 0);
       },
     );

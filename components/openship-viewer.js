@@ -1,5 +1,7 @@
 "use client";
 
+import ProjectSummaries from "./project-summaries";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   loadProvider,
@@ -270,7 +272,7 @@ export default function OpenShipViewer({ initialSnapshot = null }) {
       } catch {
         /* open() reports invalid URLs. */
       }
-      if (loaded.current?.origin === origin)
+      if (loaded.current && loaded.current.origin === origin)
         setSelection(resolveSelection(params, loaded.current));
       else void open(value, params);
     };
@@ -397,7 +399,7 @@ export default function OpenShipViewer({ initialSnapshot = null }) {
         <>
           <section className="viewer-summary">
             <h1>{snapshot.verified.manifest.project.name}</h1>
-            <p>{snapshot.verified.manifest.project.description}</p>
+            <ProjectSummaries key={snapshot.origin} project={snapshot.verified.manifest.project} />
             <a href={snapshot.origin} target="_blank" rel="noreferrer">
               {snapshot.origin} ↗
             </a>

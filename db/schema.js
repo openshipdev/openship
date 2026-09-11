@@ -68,7 +68,10 @@ export const projects = pgTable(
     id: id(),
     origin: text("origin").notNull().unique(),
     name: text("name").notNull(),
-    description: text("description").notNull(),
+    productDescription: text("product_description").notNull(),
+    productSummary: text("product_summary").notNull(),
+    technicalDescription: text("technical_description").notNull(),
+    technicalSummary: text("technical_summary").notNull(),
     metadata: jsonb("metadata").notNull().default({}),
     firstDiscoveredAt: created(),
     lastViewedAt: time("last_viewed_at"),
@@ -95,6 +98,8 @@ export const projects = pgTable(
     hidden: boolean("hidden").notNull().default(false),
   },
   (t) => [
+    check("product_description_length", sql`char_length(${t.productDescription}) between 1 and 120`),
+    check("technical_description_length", sql`char_length(${t.technicalDescription}) between 1 and 120`),
     uniqueIndex("featured_slot").on(t.featuredPosition),
     check("featured_range", sql`${t.featuredPosition} between 1 and 3`),
     check(
