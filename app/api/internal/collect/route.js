@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { revalidateTag } from "next/cache";
 import { schedule, runWorker } from "../../../../lib/server/collector.js";
 import { failure } from "../../../../lib/server/api.js";
 export const maxDuration = 240;
@@ -13,7 +14,12 @@ export async function GET(request) {
     return new Response("Unauthorized", { status: 401 });
   try {
     await schedule();
-    await runWorker();
+    try {
+      await runWorker();
+    } finally {
+      // A worker can persist snapshots before another job fails.
+      revalidateTag("osh-missing", { expire: 0 });
+    }
     return Response.json({ ok: true });
   } catch (e) {
     return failure(e);

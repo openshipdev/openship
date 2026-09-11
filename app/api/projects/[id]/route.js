@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import nextCache from "next/cache.js";
 import { projects, curationAudit } from "../../../../db/schema.js";
 import { getDb } from "../../../../lib/server/db.js";
 import { projectDetail } from "../../../../lib/server/projects.js";
@@ -48,19 +49,21 @@ export async function PATCH(request, { params }) {
         .update(projects)
         .set({ ...input, updatedAt: new Date() })
         .where(eq(projects.id, id));
-      await tx
-        .insert(curationAudit)
-        .values({
-          projectId: id,
-          adminId: session.user.id,
-          changes: Object.fromEntries(
-            Object.entries(input).map(([key, value]) => [
-              key,
-              { before: p[key], after: value },
-            ]),
-          ),
-        });
+      await tx.insert(curationAudit).values({
+        projectId: id,
+        adminId: session.user.id,
+        changes: Object.fromEntries(
+          Object.entries(input).map(([key, value]) => [
+            key,
+            { before: p[key], after: value },
+          ]),
+        ),
+      });
     });
+    if (Object.hasOwn(input, "hidden")) {
+      nextCache.revalidateTag(`osh-project:${id}`, { expire: 0 });
+      nextCache.revalidateTag("osh-missing", { expire: 0 });
+    }
     return Response.json({ ok: true });
   } catch (e) {
     if (e.code === "23505" || e.cause?.code === "23505")

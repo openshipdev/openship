@@ -1,13 +1,30 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { connection } from "next/server";
 import { SiteFooter, SiteHeader } from "../components/site-shell";
 import ProjectCard from "../components/project-card";
 import { listProjects } from "../lib/server/projects";
-export const dynamic = "force-dynamic";
-export default async function HomePage() {
+async function FeaturedProjects() {
+  await connection();
   let featured = [];
   try {
     featured = (await listProjects({ filter: "home" })).items;
   } catch {}
+  if (!featured.length) return null;
+  return (
+    <section className="featured-projects">
+      <div className="section-heading">
+        <h2>Featured projects</h2>
+        <Link href="/projects">All projects →</Link>
+      </div>
+      {featured.map((p) => (
+        <ProjectCard key={p.id} project={p} />
+      ))}
+    </section>
+  );
+}
+
+export default function HomePage() {
   return (
     <>
       <SiteHeader />
@@ -40,17 +57,9 @@ export default async function HomePage() {
             <Link href="/docs">Add OpenShip to your project →</Link>
           </p>
         </section>
-        {featured.length > 0 && (
-          <section className="featured-projects">
-            <div className="section-heading">
-              <h2>Featured projects</h2>
-              <Link href="/projects">All projects →</Link>
-            </div>
-            {featured.map((p) => (
-              <ProjectCard key={p.id} project={p} />
-            ))}
-          </section>
-        )}
+        <Suspense fallback={null}>
+          <FeaturedProjects />
+        </Suspense>
         <section className="home-note">
           <h2>One URL. A shared understanding.</h2>
           <p>

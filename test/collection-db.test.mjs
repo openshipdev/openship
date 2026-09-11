@@ -280,7 +280,14 @@ test(
     );
     await t.test(
       "auth schema, OAuth starts, authorization, audit, expiry and logout",
-      async () => {
+      async (t) => {
+        // These handlers run without a Next request context in this DB test.
+        const { default: nextCache } = await import("next/cache.js");
+        const invalidation = t.mock.method(
+          nextCache,
+          "revalidateTag",
+          () => {},
+        );
         process.env.BETTER_AUTH_URL = "http://localhost:3011";
         process.env.BETTER_AUTH_SECRET =
           "isolated-test-only-auth-secret-32-characters";
@@ -392,6 +399,13 @@ test(
           403,
         );
         assert.equal((await PATCH(request(), { params })).status, 200);
+        assert.deepEqual(
+          invalidation.mock.calls.map((call) => call.arguments),
+          [
+            [`osh-project:${p.id}`, { expire: 0 }],
+            ["osh-missing", { expire: 0 }],
+          ],
+        );
         assert.equal((await db.select().from(curationAudit)).length, 1);
         const publicList = await (
           await list(

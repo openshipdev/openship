@@ -3,7 +3,13 @@ export default function ProjectCard({ project: p, children }) {
   return (
     <article className="project-card">
       <div className="project-card-title">
-        <Link href={`/view?url=${encodeURIComponent(p.origin)}`}>
+        <Link
+          href={
+            p.oshHash
+              ? `/osh/${p.oshHash}`
+              : `/view?url=${encodeURIComponent(p.origin)}`
+          }
+        >
           <h2>{p.name}</h2>
         </Link>
         <div className="project-badges">

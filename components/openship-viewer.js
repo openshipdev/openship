@@ -177,12 +177,16 @@ function SourcesView({ snapshot, selection, onChange }) {
   );
 }
 
-export default function OpenShipViewer() {
+export default function OpenShipViewer({ initialSnapshot = null }) {
   const { data: session } = authClient.useSession();
   const [saveStatus, setSaveStatus] = useState("");
   const [input, setInput] = useState("");
-  const [snapshot, setSnapshot] = useState(null);
-  const [selection, setSelection] = useState(null);
+  const [snapshot, setSnapshot] = useState(initialSnapshot);
+  const [selection, setSelection] = useState(() =>
+    initialSnapshot
+      ? resolveSelection(new URLSearchParams(), initialSnapshot)
+      : null,
+  );
   const [phase, setPhase] = useState("");
   const [error, setError] = useState(null);
   const request = useRef(null);
@@ -245,6 +249,10 @@ export default function OpenShipViewer() {
   useEffect(() => {
     const restore = () => {
       const params = new URLSearchParams(window.location.search);
+      if (initialSnapshot) {
+        setSelection(resolveSelection(params, initialSnapshot));
+        return;
+      }
       const value = params.get("url") ?? "";
       setInput(value);
       if (!value) {
@@ -272,10 +280,10 @@ export default function OpenShipViewer() {
       request.current?.abort();
       window.removeEventListener("popstate", restore);
     };
-  }, [open]);
+  }, [open, initialSnapshot]);
 
   useEffect(() => {
-    if (!snapshot) return;
+    if (!snapshot || initialSnapshot) return;
     const controller = new AbortController();
     setSaveStatus("");
     fetch("/api/projects/observe", {
@@ -302,12 +310,14 @@ export default function OpenShipViewer() {
           );
       });
     return () => controller.abort();
-  }, [snapshot, session?.user?.id]);
+  }, [snapshot, session?.user?.id, initialSnapshot]);
 
   const changeSelection = (patch) => {
     const next = { ...selection, ...patch };
     setSelection(next);
-    window.history.pushState(null, "", selectionQuery(snapshot.origin, next));
+    const params = new URLSearchParams(selectionQuery(snapshot.origin, next));
+    if (initialSnapshot) params.delete("url");
+    window.history.pushState(null, "", `?${params}`);
   };
 
   const submit = (event) => {
@@ -393,8 +403,10 @@ export default function OpenShipViewer() {
             </a>
             {snapshot.archivedAt && (
               <p className="viewer-muted">
-                The live project is unavailable. Showing a saved snapshot
-                retrieved {new Date(snapshot.archivedAt).toLocaleDateString()}.
+                {initialSnapshot
+                  ? "Saved snapshot retrieved"
+                  : "The live project is unavailable. Showing a saved snapshot retrieved"}{" "}
+                {new Date(snapshot.archivedAt).toISOString().slice(0, 10)}.
               </p>
             )}
             {saveStatus && (
