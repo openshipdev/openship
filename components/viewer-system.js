@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { changeSystemLayer, nodeSourceFiles } from "../lib/viewer";
 
 import { filterLayerByDomains } from "@openship/graph/model";
@@ -12,40 +12,6 @@ const label = (value) => typeof value === "string" ? value : JSON.stringify(valu
 function Metadata({ value }) {
   if (!value || !Object.keys(value).length) return null;
   return <dl className="viewer-metadata">{Object.entries(value).map(([key, item]) => <div key={key}><dt>{key}</dt><dd>{label(item)}</dd></div>)}</dl>;
-}
-
-function Connections({ system, onSelect }) {
-  const [type, setType] = useState("");
-  const nodes = new Map(system.nodes.map((node) => [node.id, node]));
-  const edges = system.edges.filter((edge) => !type || edge.type === type);
-  return <section aria-label="System connections">
-    <div className="viewer-toolbar"><label>Connection type <select value={type} onChange={(e) => setType(e.target.value)}><option value="">All types</option>{["Runtime", "Dataflow", "Dependency"].map((item) => <option key={item}>{item}</option>)}</select></label></div>
-    <div className="viewer-table-scroll"><table><caption>{edges.length} connections. Arrows run from caller or producer to target.</caption><thead><tr><th>From</th><th>Type</th><th>To</th><th>Details</th></tr></thead><tbody>{edges.map((edge) => <tr key={edge.id}><td><button className="viewer-text-button" onClick={() => onSelect(edge.fromNodeId)}>{nodes.get(edge.fromNodeId)?.name}</button></td><td>{edge.type}</td><td><button className="viewer-text-button" onClick={() => onSelect(edge.toNodeId)}>{nodes.get(edge.toNodeId)?.name}</button></td><td><Metadata value={edge.metadata} /></td></tr>)}</tbody></table></div>
-    {!edges.length && <p>No connections match these filters.</p>}
-  </section>;
-}
-
-function Context({ system, selected, onSource }) {
-  const [concern, setConcern] = useState("");
-  const context = system.context;
-  if (!context) return <p>This provider includes no optional design context.</p>;
-  const documents = new Map((context.documents ?? []).map((doc) => [doc.hash, doc]));
-  const assignments = (context.matrix ?? []).filter((item) => item.nodeId === selected && (!concern || item.concern === concern));
-  const artifacts = (context.artifacts ?? []).filter((item) => item.nodeId === selected && (!concern || item.concern === concern));
-  const prompts = selected === system.rootNodeId ? context.systemPromptRefs ?? [] : [];
-  const documentView = (hash) => {
-    const doc = documents.get(hash);
-    return doc && <article className="viewer-context-card" key={hash}><h4>{doc.title}</h4><p className="viewer-muted">{doc.kind} · {doc.language}</p><pre className="viewer-prose">{doc.text}</pre><details><summary>Document metadata</summary><Metadata value={Object.fromEntries(Object.entries(doc).filter(([key]) => !["text", "title"].includes(key)))} /></details></article>;
-  };
-  return <section aria-label="Design context">
-    <label>Concern <select value={concern} onChange={(e) => setConcern(e.target.value)}><option value="">All concerns</option>{(context.concerns ?? []).map((name) => <option key={name}>{name}</option>)}</select></label>
-    {assignments.map((item, index) => <section key={`${item.concern}-${index}`}><h3>{item.concern}</h3>{[...(item.documentRefs ?? []), ...(item.skillRefs ?? [])].map(documentView)}</section>)}
-    {prompts.length > 0 && <section><h3>System prompts</h3><p>Published documents for inspection; this viewer does not execute prompts.</p>{prompts.map(documentView)}</section>}
-    {artifacts.map((artifact) => <article className="viewer-context-card" key={artifact.id}><h3>{artifact.concern} · {artifact.type}</h3>{artifact.type === "Code" ? <ul>{artifact.sourcePaths.map((path) => <li key={path}><button className="viewer-text-button" onClick={() => onSource(path)}>{path}</button></li>)}</ul> : <pre className="viewer-prose">{artifact.text}</pre>}</article>)}
-    {!assignments.length && !artifacts.length && !prompts.length && <p>No context is assigned to this component and concern.</p>}
-    <details><summary>All shared context documents ({documents.size})</summary>{[...documents.keys()].map(documentView)}</details>
-    <details><summary>Additional context metadata</summary><Metadata value={Object.fromEntries(Object.entries(context).filter(([key]) => !["concerns", "documents", "matrix", "artifacts", "systemPromptRefs"].includes(key)))} /></details>
-  </section>;
 }
 
 function Configuration({ entries }) {
@@ -82,23 +48,24 @@ export default function SystemView({ snapshot, selection, onChange }) {
   const sourceFiles = nodeSourceFiles(selected, verified.files);
   const selectNode = (node) => onChange({ node });
   const openSource = (file) => onChange({ view: "sources", file });
-  const domainFilter = design.domains?.length > 0 ? <fieldset className="viewer-domain-filter"><legend>Domains</legend><div>{design.domains.map((domain) => <label className="osg-chip" key={domain.id} title={domain.description}><input type="checkbox" checked={!selection.hiddenDomains?.includes(domain.id)} onChange={() => toggleDomain(domain.id)} />{domain.name}</label>)}</div></fieldset> : null;
-  return <div>
-    <div className="viewer-toolbar"><label>Design layer <select value={layer.id} onChange={(e) => switchLayer(e.target.value)}>{design.layers.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.role}</option>)}</select></label>
-    <label>Instance <select value={instance?.id ?? ""} onChange={(e) => {
+  const domainFilter = design.domains?.length > 0 ? <fieldset><legend>Domains</legend>{design.domains.map((domain) => <label className="osg-chip" key={domain.id} title={domain.description}><input type="checkbox" checked={!selection.hiddenDomains?.includes(domain.id)} onChange={() => toggleDomain(domain.id)} />{domain.name}</label>)}</fieldset> : null;
+  const toolbarControls = <>
+    {domainFilter}
+    <div className="osg-select-controls">
+    <label className="osg-select">Design layer <select value={layer.id} onChange={(e) => switchLayer(e.target.value)}>{design.layers.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.role}</option>)}</select></label>
+    <label className="osg-select">Instance <select value={instance?.id ?? ""} onChange={(e) => {
       const target = design.instances?.find((item) => item.id === e.target.value);
       onChange(target ? { ...changeSystemLayer(design, selection, target.layerId), instance: target.id } : { instance: "" });
-    }}><option value="">Design only</option>{(design.instances ?? []).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.environment}</option>)}</select></label></div>
-    {instance && <p className="viewer-muted">Supplied instance description: {instance.name}. Resource bindings are not verified live inventory.</p>}
-    <div className="viewer-tabs" aria-label="System views">{["architecture", "connections", "context"].map((panel) => <button key={panel} aria-pressed={selection.panel === panel} onClick={() => onChange({ panel })}>{panel[0].toUpperCase() + panel.slice(1)}</button>)}</div>
-    <p className="viewer-muted">{system.name} · {system.nodes.length} components · {system.edges.length} connections. This describes the provider’s design, not live service health.</p>
-    <div className={`viewer-system-zone${domainFilter && selection.panel !== "architecture" ? " viewer-system-zone-with-domains" : ""}`}>
-    {selection.panel !== "architecture" && domainFilter}
-    <div className="viewer-system-panel">
-    {selection.panel === "architecture" && <SystemGraph key={system.id} toolbarControls={domainFilter} system={graph} selectedNodeId={selection.node} onSelectNode={selectNode} onOpenContext={(node) => onChange({ node, panel: "context" })} />}
-    {selection.panel === "connections" && <Connections key={system.id} system={system} onSelect={selectNode} />}
-    {selection.panel === "context" && <Context key={system.id} system={system} selected={selection.node} onSource={openSource} />}
+    }}><option value="">Design only</option>{(design.instances ?? []).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.environment}</option>)}</select></label>
     </div>
+  </>;
+  return <div>
+    {instance && <p className="viewer-muted">Supplied instance description: {instance.name}. Resource bindings are not verified live inventory.</p>}
+    <p className="viewer-muted">{system.name} · {system.nodes.length} components · {system.edges.length} connections. This describes the provider’s design, not live service health.</p>
+    <div className="viewer-system-zone">
+      <div className="viewer-system-panel">
+        <SystemGraph key={system.id} toolbarControls={toolbarControls} system={graph} selectedNodeId={selection.node} onSelectNode={selectNode} />
+      </div>
     </div>
     <aside className="viewer-node-details" aria-label="Selected component" aria-live="polite"><h3>{selected.name}</h3><p>{selected.kind} · {selected.id}{selected.parentId ? ` · Parent: ${selected.parentId}` : ""}</p><Metadata value={selected.metadata} />
       {design.domains?.length > 0 && <p>Domains: {design.domains.filter((domain) => domain.nodeIds.includes(selected.id)).map((domain) => domain.name).join(", ") || "None"}</p>}

@@ -108,9 +108,9 @@ test("validates capability URLs before fetching them", async () => {
 
 test("restores shareable selections with safe defaults", async () => {
   const result = await loadProvider("https://example.com", provider({ systems: true }));
-  const state = { view: "system", panel: "context", node: "p.web", file: "app/page.js", layer: "technical", instance: "", hiddenDomains: [] };
+  const state = { view: "system", node: "p.web", file: "app/page.js", layer: "technical", instance: "", hiddenDomains: [] };
   assert.deepEqual(resolveSelection(new URLSearchParams(selectionQuery(result.origin, state)), result), state);
-  assert.deepEqual(resolveSelection(new URLSearchParams("view=invalid&panel=bad&node=unknown&file=missing"), result), { view: "system", panel: "architecture", node: "s.root", file: "app/page.js", layer: "technical", instance: "", hiddenDomains: [] });
+  assert.deepEqual(resolveSelection(new URLSearchParams("view=invalid&panel=bad&node=unknown&file=missing"), result), { view: "system", node: "s.root", file: "app/page.js", layer: "technical", instance: "", hiddenDomains: [] });
   assert.equal(resolveSelection(new URLSearchParams("view=system"), { ...result, system: null }).view, "sources");
 });
 
@@ -174,4 +174,30 @@ test('domain filters default to all, survive URL round trips and reset hidden se
   const shared = resolveSelection(new URLSearchParams('layer=technical&node=p.web&hideDomain=web'), snapshot);
   assert.equal(shared.node, 'p.web');
   assert.equal(changeSystemLayer(system, shared, 'logical').node, 'logical.root');
+});
+
+test('offline archive loader revalidates signed resources and preserves Systems embedded source ownership', async () => {
+  const { loadArchivedProvider } = await import('../lib/viewer.js');
+  const system = structuredClone(originalSystem);
+  const d = structuredClone(originalDiscovery);
+  const resources = ['discovery','manifest','bundle','systems'].map(kind => ({kind,url:`https://archive.example/${kind}`}));
+  const values = {discovery:d,manifest:system.source.manifest,bundle:system.source.bundle,systems:system};
+  const fetch = async url => url.startsWith('/api/projects?') ? Response.json({id:'saved'}) : url === '/api/projects/saved' ? Response.json({origin:'https://example.com',archive:{retrievedAt:'2026-09-10T00:00:00Z',resources}}) : Response.json(values[new URL(url).pathname.slice(1)]);
+  const loaded = await loadArchivedProvider('https://example.com',{fetch});
+  assert.equal(loaded.system.id,system.system.id);
+  assert.equal(loaded.archivedAt,'2026-09-10T00:00:00Z');
+  values.bundle={...values.bundle,digest:'sha256:'+'0'.repeat(64)};
+  await assert.rejects(loadArchivedProvider('https://example.com',{fetch}), error => error.code === 'validation');
+});
+
+
+test("retired panel URLs cannot restore or serialize alternate system views", async () => {
+  const snapshot = await loadProvider("https://example.com", provider({ systems: true }));
+  const baseline = resolveSelection(new URLSearchParams(), snapshot);
+  for (const retired of ["architecture", "connections", "context"]) {
+    const selection = resolveSelection(new URLSearchParams({ panel: retired }), snapshot);
+    assert.deepEqual(selection, baseline);
+    assert.equal(Object.hasOwn(selection, "panel"), false);
+    assert.equal(new URLSearchParams(selectionQuery(snapshot.origin, { ...selection, panel: retired })).has("panel"), false);
+  }
 });

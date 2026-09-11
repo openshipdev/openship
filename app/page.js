@@ -1,113 +1,64 @@
 import Link from "next/link";
 import { SiteFooter, SiteHeader } from "../components/site-shell";
-
-const resources = [
-  {
-    label: "Protocol",
-    links: [
-      { name: "Overview", detail: "Discovery and conventions", href: "/docs/overview" },
-      { name: "Sources", detail: "Verifiable source snapshots", href: "/docs/sources" },
-      { name: "MCP", detail: "Optional Sources transport", href: "/docs/mcp" },
-      { name: "Changes", detail: "Isolated candidate versions", href: "/docs/changes" },
-      { name: "Systems", detail: "Complete system descriptions", href: "/docs/systems" },
-    ],
-  },
-  {
-    label: "Use",
-    links: [
-      { name: "SKILL.md", detail: "Portable agent router", href: "/skill/SKILL.md" },
-      {
-        name: "Schemas",
-        detail: "Machine-readable contracts",
-        href: "/skill/references/schemas",
-      },
-      {
-        name: "Examples",
-        detail: "Valid conformance fixtures",
-        href: "/skill/references/examples/valid",
-      },
-    ],
-  },
-  {
-    label: "Build",
-    links: [
-      {
-        name: "@openship/protocol",
-        detail: "Types, validators, helpers, and CLI",
-        href: "https://www.npmjs.com/package/@openship/protocol",
-        external: true,
-      },
-      {
-        name: "Package docs",
-        detail: "Consumer and synchronization workflow",
-        href: "https://github.com/openshipdev/openship/tree/main/packages/protocol",
-        external: true,
-      },
-      {
-        name: "Source",
-        detail: "OpenShip on GitHub",
-        href: "https://github.com/openshipdev/openship",
-        external: true,
-      },
-    ],
-  },
-];
-
-function ResourceLink({ resource }) {
-  const content = (
-    <>
-      <span className="resource-name">{resource.name}</span>
-      <span className="resource-detail">{resource.detail}</span>
-      <span className="resource-arrow" aria-hidden="true">
-        {resource.external ? "↗" : "→"}
-      </span>
-    </>
-  );
-
-  return resource.external ? (
-    <a className="resource-link" href={resource.href} rel="noreferrer" target="_blank">
-      {content}
-    </a>
-  ) : (
-    <Link className="resource-link" href={resource.href}>
-      {content}
-    </Link>
-  );
-}
-
-export default function HomePage() {
+import ProjectCard from "../components/project-card";
+import { listProjects } from "../lib/server/projects";
+export const dynamic = "force-dynamic";
+export default async function HomePage() {
+  let featured = [];
+  try {
+    featured = (await listProjects({ filter: "home" })).items;
+  } catch {}
   return (
     <>
       <SiteHeader />
       <main className="home-shell">
-        <section className="home-intro" aria-labelledby="home-title">
-          <p className="status-line">Open protocol · v1.0 · draft</p>
-          <h1 id="home-title">A public interface for running software.</h1>
+        <section className="home-intro">
+          <p className="status-line">An open protocol for software</p>
+          <h1>See how a project works.</h1>
           <p className="home-summary">
-            OpenShip is a public interface that lets running projects publish their source,
-            accept isolated changes, and describe the system around them.
+            OpenShip lets projects share their source code and system design.
+            Open a project, explore its architecture, and understand what’s
+            inside.
           </p>
-          <Link className="endpoint" href="/docs/overview">
-            <span className="prompt" aria-hidden="true">
-              $
-            </span>
-            <code>GET /.well-known/openship.json</code>
-            <span aria-hidden="true">→</span>
-          </Link>
-        </section>
-
-        <section className="resource-index" aria-labelledby="resource-title">
-          <h2 id="resource-title">Find anything</h2>
-          {resources.map((group) => (
-            <div className="resource-group" key={group.label}>
-              <h3>{group.label}</h3>
-              <div className="resource-list">
-                {group.links.map((resource) => (
-                  <ResourceLink key={resource.name} resource={resource} />
-                ))}
-              </div>
+          <form className="project-open" action="/view">
+            <label htmlFor="home-url">Open an OpenShip project</label>
+            <div>
+              <input
+                id="home-url"
+                name="url"
+                type="url"
+                required
+                placeholder="https://example.com"
+              />
+              <button>Open project →</button>
             </div>
-          ))}
+          </form>
+          <p className="intro-links">
+            <Link href="/view?url=https%3A%2F%2Fopenship.dev">
+              Try OpenShip’s own project ↗
+            </Link>
+            <Link href="/docs">Add OpenShip to your project →</Link>
+          </p>
+        </section>
+        {featured.length > 0 && (
+          <section className="featured-projects">
+            <div className="section-heading">
+              <h2>Featured projects</h2>
+              <Link href="/projects">All projects →</Link>
+            </div>
+            {featured.map((p) => (
+              <ProjectCard key={p.id} project={p} />
+            ))}
+          </section>
+        )}
+        <section className="home-note">
+          <h2>One URL. A shared understanding.</h2>
+          <p>
+            Projects publish a public snapshot of their code and design. You can
+            explore without an account. Sign in to save a snapshot for
+            everyone—even if the original site goes away.
+          </p>
+          <Link href="/projects">Explore the directory →</Link>
         </section>
       </main>
       <SiteFooter />

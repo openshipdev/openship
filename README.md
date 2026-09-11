@@ -29,21 +29,15 @@ The production site publishes only the Sources capability:
 `openship.sources.json` is the fail-closed publication allowlist. The site build generates the
 served Manifest and Bundle from that exact list and refuses unsafe or secret-shaped paths.
 
+## Website and project directory
 
-## Browser viewer
+The website has four pages: `/`, `/view`, `/docs`, and `/projects`. The viewer displays a project summary and the full canvas controls: separate layer and instance selectors, graph/domain filters, the architecture canvas, and component details. Sources-only providers use a compact file browser. Existing documentation URLs redirect to `/docs?topic=...`; machine-readable protocol endpoints remain available.
 
-`/view?url=https%3A%2F%2Fexample.com` opens a public OpenShip provider directly in the browser.
-The viewer validates discovery and prefers Systems, using its embedded Sources for both views.
-A failed Systems load offers an explicit Sources fallback. There is no backend URL-fetch proxy,
-account, database, or uploaded project. Providers must allow CORS, including on redirects;
-use the final canonical site URL when a hosting-level redirect does not supply CORS headers.
+Valid projects viewed by anyone are independently checked and listed. Signed-in views enable durable snapshots in private Cloudflare R2 storage, with metadata in Postgres. Better Auth supports GitHub and Google. Scheduled checks refresh projects daily and retain earlier snapshots; archived projects remain viewable when a provider disappears.
 
-Share a selection with `view=sources|system`, `panel=architecture|connections|context`, and
-`node` or `file`. Source files and context are displayed as text, never executed. Optional
-numeric `metadata.order` affects diagram ordering; all conformant v1 graphs work without it.
-The current browser limits are 1 MiB discovery, 64 MiB per document, 32 MiB decoded Sources,
-30 seconds per request, and 2,000 nodes / 10,000 connections for diagrams. Loopback HTTP is
-available only in development. Run `pnpm test:viewer` for loader, validation and URL-state tests.
+See [deployment and metadata documentation](docs/deployment.md) for database migrations, OAuth, R2 CORS, environment variables, administrator setup, retention behavior, and preview acceptance checks. Without configured storage, the browser viewer still works.
+
+Share selections with `/view?url=...`, `layer`, `instance`, `node`, or `file`. The viewer validates published data and displays sources as text; it never executes provider content. Limits remain 1 MiB discovery, 64 MiB per document, 32 MiB decoded Sources, 30 seconds per request, and 2,000 nodes / 10,000 connections. Browser provider reads require CORS; local HTTP viewing is supported only in development. Server collection always requires public HTTPS and independently checks DNS and redirects.
 
 ## Layered Systems release
 
