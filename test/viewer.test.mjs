@@ -154,6 +154,26 @@ test('layer and instance navigation round trips and resets invalid selections', 
   assert.equal(reset.layer, 'logical'); assert.equal(reset.node, 'logical.root'); assert.equal(reset.instance, '');
 });
 
+test('defaults to the provider production target while preserving explicit design selections', async () => {
+  const { system } = await fixture('systems-layered');
+  const snapshot = { system, verified: { files: [] } };
+  const state = resolveSelection(new URLSearchParams(), snapshot);
+  assert.equal(state.layer, 'provider');
+  assert.equal(state.instance, 'production');
+  assert.equal(state.node, system.layers.find(layer => layer.id === 'provider').rootNodeId);
+  for (const layer of ['provider', 'technical']) {
+    const design = resolveSelection(new URLSearchParams({ layer }), snapshot);
+    assert.equal(design.layer, layer);
+    assert.equal(design.instance, '');
+    assert.deepEqual(resolveSelection(new URLSearchParams(selectionQuery('https://example.com', design)), snapshot), design);
+  }
+  system.instances = [];
+  assert.equal(resolveSelection(new URLSearchParams(), snapshot).layer, 'provider');
+  assert.equal(resolveSelection(new URLSearchParams(), snapshot).instance, '');
+  system.layers = system.layers.filter(layer => layer.role !== 'provider');
+  assert.equal(resolveSelection(new URLSearchParams(), snapshot).layer, 'logical');
+});
+
 test('aggregate graph limits include nodes across layers and refinement links', async () => {
   const source = provider({ systems: true, mutate: d => {
     const root = { id: 'r', kind: 'Root', name: 'Root', metadata: { ownership: 'first_party' } };

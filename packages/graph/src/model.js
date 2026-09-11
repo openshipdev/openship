@@ -249,3 +249,25 @@ export function updateMeasurements(previous, changes) {
   }
   return next;
 }
+
+// Cards represent their nested endpoints as well as their own component.
+// Keep selection to one hop; do not traverse neighbors' other connections.
+export function graphSelection(model, selected) {
+  const neighbors = new Set(), connectedEdges = new Set();
+  const selectedCard = model.cards.find((card) => card.node.id === selected);
+  const selectedIds = new Set(selectedCard
+    ? [selected, ...selectedCard.children.map((node) => node.id)]
+    : [selected]);
+  for (const edge of model.edges) {
+    if (!selectedIds.has(edge.fromNodeId) && !selectedIds.has(edge.toNodeId)) continue;
+    connectedEdges.add(edge.id);
+    for (const [endpoint, owner] of [[edge.fromNodeId, edge.source], [edge.toNodeId, edge.target]]) {
+      if (!selectedIds.has(endpoint)) {
+        neighbors.add(endpoint);
+        if (owner !== selected) neighbors.add(owner);
+      }
+    }
+  }
+  neighbors.delete(selected);
+  return { neighbors, connectedEdges };
+}

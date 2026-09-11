@@ -1,7 +1,7 @@
 @import "@xyflow/react/dist/style.css";
 
-.osg { --osg-bg: #fff; --osg-fg: #273242; --osg-muted: #667587; --osg-border: #cfd6df; --osg-surface: #f6f8fa; color: var(--osg-fg); background: var(--osg-bg); font: 13px/1.45 system-ui, sans-serif; border: 1px solid var(--osg-border); border-radius: 10px; overflow: hidden; }
-[data-theme="dark"] .osg { --osg-bg: #171d27; --osg-fg: #e3e9f1; --osg-muted: #a0acbe; --osg-border: #384353; --osg-surface: #202835; }
+.osg { --osg-selection: #2563eb; --osg-neighbor: #16a34a; --osg-bg: #fff; --osg-fg: #273242; --osg-muted: #667587; --osg-border: #cfd6df; --osg-surface: #f6f8fa; color: var(--osg-fg); background: var(--osg-bg); font: 13px/1.45 system-ui, sans-serif; border: 1px solid var(--osg-border); border-radius: 10px; overflow: hidden; }
+[data-theme="dark"] .osg { --osg-selection: #7aa7ff; --osg-neighbor: #4ade80; --osg-bg: #171d27; --osg-fg: #e3e9f1; --osg-muted: #a0acbe; --osg-border: #384353; --osg-surface: #202835; }
 .osg *, .osg *::before, .osg *::after { box-sizing: border-box; }
 .osg .osg-toolbar { display: flex; gap: 18px; flex-wrap: wrap; padding: 14px 16px; border-bottom: 1px solid var(--osg-border); align-items: center; }
 .osg fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -13,7 +13,7 @@
 .osg button { color: var(--osg-fg); background: var(--osg-bg); border: 1px solid var(--osg-border); border-radius: 5px; padding: 7px 10px; cursor: pointer; font: inherit; }
 .osg button:hover { background: var(--osg-surface); }
 .osg button:focus-visible { outline: 2px solid #2f71ff; outline-offset: 3px; }
-.osg button:disabled { opacity: .5; cursor: wait; }
+.osg button:disabled { opacity: .5; cursor: not-allowed; }
 .osg .osg-toolbar-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 18px; flex-basis: 100%; min-width: 0; }
 .osg .osg-select-controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 18px; margin-left: auto; min-width: 0; max-width: 100%; }
 .osg .osg-select { display: flex; flex-direction: column; gap: 6px; min-width: 0; max-width: 100%; font-size: 10px; color: var(--osg-muted); text-transform: uppercase; letter-spacing: .06em; }
@@ -31,7 +31,7 @@
 .osg .osg-badge-container { background: #b98920; }
 .osg .osg-badge-library { background: #7f63d2; }
 .osg button.osg-name { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; border: 0; background: transparent; font-size: 13px; font-weight: 650; text-align: left; }
-.osg .osg-selected > .osg-name { color: #2f71ff; text-decoration: underline; text-underline-offset: 3px; }
+.osg .osg-selected > .osg-name { color: var(--osg-selection); text-decoration: underline; text-underline-offset: 3px; }
 .osg .osg-meta { font-size: 10px; color: var(--osg-muted); margin: 3px 2px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .osg button.osg-context { background: transparent; color: var(--osg-muted); border: 0; padding: 0 2px; font-size: 10px; }
 .osg .react-flow__handle { width: 6px; height: 6px; background: var(--osg-muted); border: 1px solid var(--osg-bg); }
@@ -45,7 +45,7 @@
 .osg:fullscreen .osg-canvas { flex: 1; min-height: 0; }
 @media (max-width: 700px) { .osg-canvas { height: 520px; } .osg .osg-toolbar { gap: 10px; } .osg .osg-actions { margin-left: 0; } }
 /* Read-only React Flow nodes disable pointer events; embedded actions opt in. */
-.osg .osg-component button { pointer-events: auto; }
+.osg .osg-component { pointer-events: auto; }
 
 .osg .react-flow__node-component { cursor: grab; }
 .osg .react-flow__node-component.dragging { cursor: grabbing; }
@@ -57,3 +57,12 @@
 .osg-internal-label { display: inline-block; max-width: 220px; height: 20px; padding: 2px 6px; border-radius: 4px; background: var(--osg-bg); color: var(--osg-fg); font-size: 10px; line-height: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: auto; }
 
 .osg-internal-labels { display: flex; flex-direction: column; align-items: center; }
+
+/* Keep highlight widths stable so connection handles do not move on selection. */
+.osg .osg-card.osg-selected, .osg .osg-root.osg-selected, .osg .osg-nested.osg-selected { border-color: var(--osg-selection); box-shadow: 0 0 0 2px var(--osg-selection); }
+.osg .osg-card.osg-neighbor, .osg .osg-root.osg-neighbor, .osg .osg-nested.osg-neighbor { border-color: var(--osg-neighbor); box-shadow: 0 0 0 1px var(--osg-neighbor); }
+.osg .osg-neighbor > .osg-name { color: var(--osg-neighbor); }
+.osg .osg-selected > .react-flow__handle { background: var(--osg-selection); }
+.osg .osg-neighbor > .react-flow__handle { background: var(--osg-neighbor); }
+.osg .osg-internal-path.osg-connected { stroke: var(--osg-selection); stroke-width: 2.5; }
+.osg .osg-internal-label.osg-connected { color: var(--osg-selection); }

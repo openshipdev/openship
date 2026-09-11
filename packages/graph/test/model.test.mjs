@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { autoLayout, buildGraph, DEFAULT_FILTERS, gridPositions, updateMeasurements } from '../src/model.js';
+import { autoLayout, buildGraph, DEFAULT_FILTERS, gridPositions, graphSelection, updateMeasurements } from '../src/model.js';
 
 const node = (id, kind, parentId, ownership = 'first_party', boundary) => ({ id, name: id, kind, parentId, metadata: { ownership, ...(boundary ? { boundary } : {}) } });
 const system = {
@@ -232,4 +232,24 @@ test('port geometry includes host and nested row borders', async () => {
   assert.deepEqual(cardHandle(card, 'service', true), { x: 303, y: 154 });
   const path = roundedRoute([{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 4 }]);
   assert.equal(path, 'M 0 0 L 1 0 Q 2 0 2 1 L 2 4');
+});
+
+
+test('card selection highlights nested incoming and outgoing edges, but only one-hop neighbors', () => {
+  const graph = buildGraph({ ...system, edges: [...system.edges,
+    { id: 'incoming', fromNodeId: 'remote', toNodeId: 'container', type: 'Runtime' },
+    { id: 'second-hop', fromNodeId: 'remote', toNodeId: 'lib', type: 'Runtime' },
+  ] });
+  const selected = graphSelection(graph, 'host');
+  assert.deepEqual([...selected.connectedEdges].sort(), ['incoming', 'library', 'local', 'network']);
+  assert.deepEqual([...selected.neighbors].sort(), ['lib', 'remote']);
+  const nested = graphSelection(graph, 'container');
+  assert.deepEqual([...nested.connectedEdges].sort(), ['incoming', 'local']);
+  assert(nested.neighbors.has('app'));
+  assert(nested.neighbors.has('remote'));
+  assert(!nested.neighbors.has('lib'));
+  const filtered = graphSelection(buildGraph(system, { ...DEFAULT_FILTERS, Runtime: false }), 'host');
+  assert(!filtered.connectedEdges.has('network'));
+  assert(!filtered.neighbors.has('remote'));
+  assert.equal(graphSelection(graph, null).connectedEdges.size, 0);
 });
