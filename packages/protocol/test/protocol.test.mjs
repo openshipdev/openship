@@ -62,7 +62,7 @@ test("rejects invalid canonical fixtures", async () => {
   assert.throws(() => validateDiscovery({
     openship: "1.0",
     capability: "discovery",
-    project: { name: "Broken", description: "Broken MCP URL" },
+    project: { name: "Broken", productDescription: "Broken MCP URL", productSummary: "# Product", technicalDescription: "Test implementation.", technicalSummary: "# Deployment" },
     agent: {
       summary: "OpenShip exposes capabilities for a running project.",
       instructions: "Fetch and read agent.skill before using any capability.",
@@ -73,13 +73,13 @@ test("rejects invalid canonical fixtures", async () => {
   assert.throws(() => validateDiscovery({
     openship: "1.0",
     capability: "discovery",
-    project: { name: "Broken", description: "Agent bootstrap is missing." },
+    project: { name: "Broken", productDescription: "Agent bootstrap is missing.", productSummary: "# Product", technicalDescription: "Test implementation.", technicalSummary: "# Deployment" },
     capabilities: { sources: { description: "Retrieve source.", manifest: "https://example.com/manifest", bundle: "https://example.com/bundle" } },
   }), /\$\.agent/);
   assert.throws(() => validateDiscovery({
     openship: "1.0",
     capability: "discovery",
-    project: { name: "Broken", description: "Capability description is missing." },
+    project: { name: "Broken", productDescription: "Capability description is missing.", productSummary: "# Product", technicalDescription: "Test implementation.", technicalSummary: "# Deployment" },
     agent: {
       summary: "OpenShip exposes capabilities for a running project.",
       instructions: "Fetch and read agent.skill before using any capability.",
@@ -114,7 +114,7 @@ test("validates binary and symlink source entries", () => {
     { path: "assets/link.bin", size: 4, sha256: sha256Hex(binary), encoding: "base64", mediaType: "application/octet-stream", type: "symlink", target: "assets/data.bin" },
   ];
   const digest = computeSourcesDigest(metadata);
-  const manifest = { openship: "1.0", capability: "sources", digest, project: { name: "Binary", description: "Binary and symlink fixture." }, totals: { files: 2, bytes: 8 }, files: metadata };
+  const manifest = { openship: "1.0", capability: "sources", digest, project: { name: "Binary", productDescription: "Binary and symlink fixture.", productSummary: "# Product", technicalDescription: "Test implementation.", technicalSummary: "# Deployment" }, totals: { files: 2, bytes: 8 }, files: metadata };
   const content = encodeOpenShipBase64(binary);
   const bundle = { openship: "1.0", capability: "sources", digest, files: { "assets/data.bin": { encoding: "base64", content }, "assets/link.bin": { encoding: "base64", content } } };
   assert.equal(validateSources(manifest, bundle).decodedBytes, 8);
@@ -183,4 +183,27 @@ test("composes replacement and deletion patches", async () => {
   const current = validateSources(currentManifest, currentBundle);
   const patch = composeChangesSubmission(base, current, { title: "Update README", intent: "Clarify the project." });
   assert.equal(patch.files["app/page.js"].content, "export default 'OpenShip'\n");
+});
+
+test("requires both Markdown summaries and limits descriptions to 120 Unicode code points", async () => {
+  for (const [fixture, validate] of [["discovery.json", validateDiscovery], ["sources-manifest.json", validateSourcesManifest]]) {
+    const document = await json("valid", fixture);
+    for (const field of ["productDescription", "productSummary", "technicalDescription", "technicalSummary"]) {
+      for (const value of [undefined, "", 123]) {
+        const invalid = structuredClone(document);
+        invalid.project[field] = value;
+        assert.throws(() => validate(invalid), new RegExp(field));
+      }
+    }
+    for (const field of ["productDescription", "technicalDescription"]) {
+      const candidate = structuredClone(document);
+      candidate.project[field] = "😀".repeat(120);
+      validate(candidate);
+      candidate.project[field] += "x";
+      assert.throws(() => validate(candidate), /120/);
+    }
+    const legacy = structuredClone(document);
+    legacy.project = { name: "Old project", description: "Legacy description" };
+    assert.throws(() => validate(legacy), /productDescription/);
+  }
 });
