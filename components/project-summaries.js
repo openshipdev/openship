@@ -37,18 +37,7 @@ export default function ProjectSummaries({ project, detail = false }) {
           </button>
         </section>
         <section className="project-summary-section project-technical-section">
-          <h2>
-            <button
-              type="button"
-              className="technical-summary-toggle"
-              aria-expanded={technicalExpanded}
-              aria-controls={technicalId}
-              onClick={() => setTechnicalExpanded(!technicalExpanded)}
-            >
-              Technical summary
-              <span aria-hidden="true">{technicalExpanded ? "−" : "+"}</span>
-            </button>
-          </h2>
+          <h2>Technical summary</h2>
           <p className="project-technical-description">
             {project.technicalDescription}
           </p>
@@ -61,6 +50,16 @@ export default function ProjectSummaries({ project, detail = false }) {
               {project.technicalSummary}
             </ReactMarkdown>
           </div>
+          <button
+            type="button"
+            className="summary-toggle"
+            aria-expanded={technicalExpanded}
+            aria-controls={technicalId}
+            onClick={() => setTechnicalExpanded(!technicalExpanded)}
+          >
+            {technicalExpanded ? "Show less" : "Read technical summary"}
+            <span aria-hidden="true">{technicalExpanded ? "↑" : "↓"}</span>
+          </button>
         </section>
       </div>
     );

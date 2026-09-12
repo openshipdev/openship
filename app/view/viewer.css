@@ -152,7 +152,6 @@
   background: var(--surface);
 }
 .viewer-primary-tabs {
-  border-bottom: 1px solid var(--border);
   padding-bottom: 15px;
 }
 .viewer-sources {
@@ -407,26 +406,6 @@
   font-size: 0.8rem;
   font-weight: 500;
   text-decoration: none;
-}
-.viewer-shell .technical-summary-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  font: inherit;
-  text-align: left;
-}
-.technical-summary-toggle span {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  font-size: 1rem;
 }
 .project-technical-section h2 {
   margin-bottom: 8px;
