@@ -110,8 +110,20 @@ test("restores shareable selections with safe defaults", async () => {
   const result = await loadProvider("https://example.com", provider({ systems: true }));
   const state = { view: "system", node: "p.web", file: "app/page.js", layer: "technical", instance: "", hiddenDomains: [] };
   assert.deepEqual(resolveSelection(new URLSearchParams(selectionQuery(result.origin, state)), result), state);
-  assert.deepEqual(resolveSelection(new URLSearchParams("view=invalid&panel=bad&node=unknown&file=missing"), result), { view: "system", node: "s.root", file: "app/page.js", layer: "technical", instance: "", hiddenDomains: [] });
-  assert.equal(resolveSelection(new URLSearchParams("view=system"), { ...result, system: null }).view, "sources");
+  assert.deepEqual(resolveSelection(new URLSearchParams("view=invalid&panel=bad&node=unknown&file=missing"), result), { view: "summary", node: "s.root", file: "app/page.js", layer: "technical", instance: "", hiddenDomains: [] });
+  assert.equal(resolveSelection(new URLSearchParams("view=system"), { ...result, system: null }).view, "summary");
+});
+
+test("summary is the default and all available tabs restore from shared URLs", async () => {
+  const result = await loadProvider("https://example.com", provider({ systems: true }));
+  for (const snapshot of [result, { ...result, system: null }]) {
+    assert.equal(resolveSelection(new URLSearchParams(), snapshot).view, "summary");
+    for (const view of ["summary", "sources", ...(snapshot.system ? ["system"] : [])]) {
+      const state = resolveSelection(new URLSearchParams({ view }), snapshot);
+      assert.equal(state.view, view);
+      assert.deepEqual(resolveSelection(new URLSearchParams(selectionQuery(snapshot.origin, state)), snapshot), state);
+    }
+  }
 });
 
 test("source selectors resolve only verified files and graph layout is deterministic", async () => {

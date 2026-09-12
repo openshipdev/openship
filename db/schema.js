@@ -98,8 +98,14 @@ export const projects = pgTable(
     hidden: boolean("hidden").notNull().default(false),
   },
   (t) => [
-    check("product_description_length", sql`char_length(${t.productDescription}) between 1 and 120`),
-    check("technical_description_length", sql`char_length(${t.technicalDescription}) between 1 and 120`),
+    check(
+      "product_description_length",
+      sql`char_length(${t.productDescription}) between 1 and 120`,
+    ),
+    check(
+      "technical_description_length",
+      sql`char_length(${t.technicalDescription}) between 1 and 120`,
+    ),
     uniqueIndex("featured_slot").on(t.featuredPosition),
     check("featured_range", sql`${t.featuredPosition} between 1 and 3`),
     check(
@@ -199,4 +205,27 @@ export const rateLimits = pgTable("rate_limits", {
 export const workerStatus = pgTable("worker_status", {
   id: text("id").primaryKey(),
   lastRunAt: time("last_run_at").notNull(),
+});
+
+export const vercelInstallations = pgTable("vercel_installations", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  vercelUserId: text("vercel_user_id").notNull(),
+  teamId: text("team_id"),
+  accessToken: text("access_token").notNull(),
+  gatewayToken: text("gateway_token"),
+  gatewayStatus: text("gateway_status"),
+  gatewayMessage: text("gateway_message"),
+  createdAt: created(),
+  updatedAt: time("updated_at").notNull().defaultNow(),
+});
+
+export const gatewayConnections = pgTable("gateway_connections", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  state: text("state").notNull(),
+  updatedAt: time("updated_at").notNull().defaultNow(),
 });

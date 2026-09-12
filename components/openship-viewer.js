@@ -434,65 +434,120 @@ export default function OpenShipViewer({ initialSnapshot = null }) {
       )}
       {snapshot && selection && (
         <>
-          <section className="viewer-summary">
+          <header className="viewer-project-heading">
             <h1>{snapshot.verified.manifest.project.name}</h1>
             <p className="viewer-project-description">
               {snapshot.verified.manifest.project.productDescription}
             </p>
-            <a href={snapshot.origin} target="_blank" rel="noreferrer">
-              {snapshot.origin} ↗
-            </a>
-            <p className="viewer-muted">
-              {snapshot.archivedAt && !initialSnapshot
-                ? "The live project is unavailable. Showing a saved snapshot retrieved"
-                : "Retrieved"}{" "}
-              <RetrievalTime
-                value={snapshot.archivedAt ?? snapshot.retrievedAt}
-              />
-            </p>
-            {saveStatus && (
-              <p className="viewer-muted" role="status">
-                {saveStatus}
-              </p>
-            )}
-          </section>
-          <ProjectSummaries
-            key={snapshot.origin}
-            project={snapshot.verified.manifest.project}
-            detail
-          />
+          </header>
           <div
             className="viewer-tabs viewer-primary-tabs"
+            role="tablist"
             aria-label="Snapshot views"
+            onKeyDown={(event) => {
+              const tabs = [
+                ...event.currentTarget.querySelectorAll(
+                  '[role="tab"]:not(:disabled)',
+                ),
+              ];
+              const index = tabs.indexOf(document.activeElement);
+              let next;
+              if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
+              else if (event.key === "ArrowLeft")
+                next = (index - 1 + tabs.length) % tabs.length;
+              else if (event.key === "Home") next = 0;
+              else if (event.key === "End") next = tabs.length - 1;
+              else return;
+              event.preventDefault();
+              tabs[next].focus();
+              tabs[next].click();
+            }}
           >
-            <button
-              aria-pressed={selection.view === "sources"}
-              onClick={() => changeSelection({ view: "sources" })}
-            >
-              Sources
-            </button>
-            {snapshot.system && (
+            {[
+              { id: "summary", label: "Summary" },
+              { id: "sources", label: "Sources" },
+              { id: "system", label: "System", disabled: !snapshot.system },
+            ].map(({ id, label, disabled }) => (
               <button
-                aria-pressed={selection.view === "system"}
-                onClick={() => changeSelection({ view: "system" })}
+                key={id}
+                id={`viewer-tab-${id}`}
+                type="button"
+                role="tab"
+                aria-selected={selection.view === id}
+                aria-controls={`viewer-panel-${id}`}
+                tabIndex={selection.view === id ? 0 : -1}
+                disabled={disabled}
+                title={disabled ? "No system design available" : undefined}
+                onClick={() => changeSelection({ view: id })}
               >
-                System
+                {label}
               </button>
-            )}
+            ))}
           </div>
-          {selection.view === "sources" ? (
-            <SourcesView
-              snapshot={snapshot}
-              selection={selection}
-              onChange={changeSelection}
+          <section
+            id="viewer-panel-summary"
+            role="tabpanel"
+            aria-labelledby="viewer-tab-summary"
+            hidden={selection.view !== "summary"}
+            tabIndex={0}
+          >
+            <section className="viewer-summary">
+              <p className="viewer-project-description">
+                {snapshot.verified.manifest.project.productDescription}
+              </p>
+              <a href={snapshot.origin} target="_blank" rel="noreferrer">
+                {snapshot.origin} ↗
+              </a>
+              <p className="viewer-muted">
+                {snapshot.archivedAt && !initialSnapshot
+                  ? "The live project is unavailable. Showing a saved snapshot retrieved"
+                  : "Retrieved"}{" "}
+                <RetrievalTime
+                  value={snapshot.archivedAt ?? snapshot.retrievedAt}
+                />
+              </p>
+              {saveStatus && (
+                <p className="viewer-muted" role="status">
+                  {saveStatus}
+                </p>
+              )}
+            </section>
+            <ProjectSummaries
+              key={snapshot.origin}
+              project={snapshot.verified.manifest.project}
+              detail
             />
-          ) : (
-            <SystemView
-              snapshot={snapshot}
-              selection={selection}
-              onChange={changeSelection}
-            />
-          )}
+          </section>
+          <section
+            id="viewer-panel-sources"
+            role="tabpanel"
+            aria-labelledby="viewer-tab-sources"
+            hidden={selection.view !== "sources"}
+            tabIndex={0}
+          >
+            {selection.view === "sources" && (
+              <SourcesView
+                snapshot={snapshot}
+                selection={selection}
+                onChange={changeSelection}
+              />
+            )}
+          </section>
+          <section
+            id="viewer-panel-system"
+            role="tabpanel"
+            aria-labelledby="viewer-tab-system"
+            hidden={selection.view !== "system"}
+            tabIndex={0}
+          >
+            {selection.view === "system" && snapshot.system && (
+              <SystemView
+                snapshot={snapshot}
+                selection={selection}
+                onChange={changeSelection}
+              />
+            )}
+          </section>
         </>
       )}
       {!snapshot && !phase && !error && (

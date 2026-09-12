@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { authClient } from "../lib/auth-client";
 export default function AccountControl() {
@@ -41,10 +42,15 @@ export default function AccountControl() {
     try {
       const result = await authClient.signIn.social({
         provider,
+        ...(provider === "vercel"
+          ? { errorCallbackURL: "/profile?error=vercel" }
+          : {}),
         callbackURL:
-          window.location.pathname +
-          window.location.search +
-          window.location.hash,
+          provider === "vercel"
+            ? "/api/integrations/vercel/install"
+            : window.location.pathname +
+              window.location.search +
+              window.location.hash,
       });
       if (result.error) setError(result.error.message || "Login failed.");
     } catch {
@@ -101,6 +107,9 @@ export default function AccountControl() {
       )}
       {open && session && (
         <div id={menuId} className="account-menu account-profile-menu">
+          <Link href="/profile" onClick={() => setOpen(false)}>
+            Profile
+          </Link>
           <button disabled={busy} onClick={logout}>
             {busy ? "Logging out…" : "Log out"}
           </button>
@@ -115,6 +124,9 @@ export default function AccountControl() {
           </button>
           <button disabled={busy} onClick={() => login("google")}>
             Google
+          </button>
+          <button disabled={busy} onClick={() => login("vercel")}>
+            Vercel
           </button>
           <button onClick={() => setOpen(false)}>Close</button>
           {error && <p role="alert">{error}</p>}

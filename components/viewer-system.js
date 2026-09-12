@@ -118,7 +118,7 @@ export default function SystemView({ snapshot, selection, onChange }) {
     </>
   );
   return (
-    <div>
+    <div className="viewer-system-view">
       {instance && (
         <p className="viewer-muted">
           Supplied instance description: {instance.name}. Resource bindings are

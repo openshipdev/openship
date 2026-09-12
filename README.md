@@ -75,3 +75,44 @@ shared remote caching requires a hosting-provided or configured cache handler.
 `@openship/protocol` 0.1.0 introduces Systems 2.0 (`systemsVersion: "2.0"`). Consumers must use ordered `system.layers`, explicit `system.refinements`, and optional `system.instances`; the old graph is rejected. Sources and Changes remain compatible. The viewer renders one layer at a time and binds instances separately.
 
 Release the tested protocol tarball before deploying migrated consumers. Memorioso must pin 0.1.0 and synchronize its vendored skill with that exact artifact. Roll out the updated viewer and Memorioso together; consumers can explicitly select Sources while a provider still serves legacy Systems. Secret and snapshot references remain descriptive and unresolved.
+
+### Vercel login and profile
+
+Create a [Sign in with Vercel app](https://vercel.com/docs/sign-in-with-vercel/getting-started) and configure:
+
+- Scopes: `openid email profile offline_access` (email is required by the existing account system).
+- Client authentication: `client_secret_post`.
+- Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/vercel`, for example `http://localhost:3000/api/auth/callback/vercel`. Register each production/local callback explicitly.
+- Server environment variables: `VERCEL_CLIENT_ID` and `VERCEL_CLIENT_SECRET`, plus the existing `DATABASE_URL`, `BETTER_AUTH_URL`, and stable `BETTER_AUTH_SECRET`.
+
+Restart the app after configuring credentials. Choose **Log in → Vercel**, or open `/profile`. Existing Google/GitHub users can explicitly switch accounts from that page; automatic email-based account linking stays disabled.
+
+The integration uses Better Auth's generic OAuth provider for Authorization Code + S256 PKCE and refresh-token support. Tokens are stored encrypted in the existing `auth_account` table; no schema migration is needed. Refresh operations use a database transaction and per-user advisory lock to persist rotated tokens atomically. The public token retrieval/refresh endpoints are blocked; only server-side code retrieves credentials.
+
+After Vercel login, the app redirects through `/api/integrations/vercel/install` to `https://vercel.com/integrations/openship-dev/new` with a one-time state. Existing users can also connect from `/profile`.
+
+Configure the **openship-dev integration**, separately from the login app:
+
+- Redirect URL: `https://openship-dev.staffx.dev/api/integrations/callback/vercel`
+- Permissions: **Project: Read**, and grant access to the projects to display.
+- Server environment: `VERCEL_INTEGRATION_CLIENT_ID` and `VERCEL_INTEGRATION_CLIENT_SECRET` from the Integrations Console. These are separate from `VERCEL_CLIENT_ID` and `VERCEL_CLIENT_SECRET`.
+- Apply database migrations with the configured `DATABASE_URL` before deploying. The `vercel_installations` table stores encrypted installation tokens and their owning user/team.
+
+The installation must be started on `openship-dev.staffx.dev` (the callback host) with the logged-in user's session. The callback checks the one-time state against an HttpOnly cookie and database record, binds it to the same session and Vercel identity, exchanges the authorization code at `/v2/oauth/access_token`, and redirects to `/profile`. Untrusted callback `next` URLs are not followed. Failed or expired attempts can be restarted from the profile.
+
+`/profile` uses the installation token to fetch `/v9/projects` scoped to the installation's team. It shows project names, frameworks and creation dates, with pagination and selection between installed connections. Tokens and raw project settings or environment variables never reach the browser. Revoked installations or missing permissions produce an access error; login tokens are not used as a fallback. AI Gateway is not called.
+
+Run `pnpm test:vercel` for OAuth, installation security, and Vercel API regression checks.
+
+The profile also offers a separate **AI Gateway via fx** device authorization.
+It uses the public client ID from `vercel-labs/fx` commit
+`95b567af7c6f9ff079bb0b665b39864326bbacfd`, with `openid offline_access`.
+The UI identifies the fx registration before users approve it. This connection
+requires an OpenShip session but does not require a Vercel login or installation.
+Device codes, access tokens and rotating refresh tokens are encrypted in
+`gateway_connections`; only approval links, user codes and connection status
+reach the browser. Pending approvals are bound to the initiating session.
+Polling respects Vercel's interval, slowdown responses and expiry. Concurrent
+polls and refreshes are serialized. The profile checks the authenticated model
+catalog after approval; this does not verify inference billing. Disconnect removes
+the local connection; users can revoke the authorization in Vercel.

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { SiteHeader, SiteFooter } from "../../components/site-shell";
@@ -6,7 +7,7 @@ import ProjectAdmin from "../../components/project-admin";
 import { listProjects, workerHealth } from "../../lib/server/projects";
 import { getSession, isAdmin } from "../../lib/server/auth";
 export const metadata = { title: "Projects" };
-export default async function ProjectsPage({ searchParams }) {
+async function ProjectDirectory({ searchParams }) {
   const params = await searchParams;
   let result = { items: [], total: 0, page: 1 },
     admin = false,
@@ -28,6 +29,75 @@ export default async function ProjectsPage({ searchParams }) {
     `/projects?${new URLSearchParams({ q: params.q || "", filter: params.filter || "all", page: String(page) })}`;
   return (
     <>
+      <form className="directory-search">
+        <input
+          type="search"
+          name="q"
+          defaultValue={params.q || ""}
+          placeholder="Search projects"
+          aria-label="Search projects"
+        />
+        <select
+          name="filter"
+          defaultValue={params.filter || "all"}
+          aria-label="Filter projects"
+        >
+          {["all", "featured", "top", "promoted", "unavailable"].map((f) => (
+            <option value={f} key={f}>
+              {f[0].toUpperCase() + f.slice(1)}
+            </option>
+          ))}
+        </select>
+        <button>Search</button>
+      </form>
+      {error ? (
+        <p role="alert">{error}</p>
+      ) : (
+        <>
+          <div className="project-grid">
+            {result.items.map((p) => (
+              <ProjectCard key={p.id} project={p}>
+                {admin && <ProjectAdmin project={p} />}
+              </ProjectCard>
+            ))}
+          </div>
+          {!result.items.length && (
+            <p className="empty-directory">
+              No projects here yet. <Link href="/view">Open a project</Link> to
+              add it.
+            </p>
+          )}
+          <nav className="pagination" aria-label="Directory pages">
+            {result.page > 1 && (
+              <Link href={href(result.page - 1)}>← Previous</Link>
+            )}
+            <span>{result.total} projects</span>
+            {result.page * 24 < result.total && (
+              <Link href={href(result.page + 1)}>Next →</Link>
+            )}
+          </nav>
+        </>
+      )}
+      {health && (
+        <details>
+          <summary>Collection health</summary>
+          <p>
+            Last scheduler run: {health.lastRunAt?.toISOString() || "Never"}
+          </p>
+          {health.states.map((s) => (
+            <p key={s.state}>
+              {s.state}: {s.count}
+            </p>
+          ))}
+        </details>
+      )}
+    </>
+  );
+}
+
+export default function ProjectsPage({ searchParams }) {
+  return (
+    <>
       <SiteHeader />
       <main className="directory-shell">
         <header>
@@ -37,68 +107,9 @@ export default async function ProjectsPage({ searchParams }) {
             each project.
           </p>
         </header>
-        <form className="directory-search">
-          <input
-            type="search"
-            name="q"
-            defaultValue={params.q || ""}
-            placeholder="Search projects"
-            aria-label="Search projects"
-          />
-          <select
-            name="filter"
-            defaultValue={params.filter || "all"}
-            aria-label="Filter projects"
-          >
-            {["all", "featured", "top", "promoted", "unavailable"].map((f) => (
-              <option value={f} key={f}>
-                {f[0].toUpperCase() + f.slice(1)}
-              </option>
-            ))}
-          </select>
-          <button>Search</button>
-        </form>
-        {error ? (
-          <p role="alert">{error}</p>
-        ) : (
-          <>
-            <div className="project-grid">
-              {result.items.map((p) => (
-                <ProjectCard key={p.id} project={p}>
-                  {admin && <ProjectAdmin project={p} />}
-                </ProjectCard>
-              ))}
-            </div>
-            {!result.items.length && (
-              <p className="empty-directory">
-                No projects here yet. <Link href="/view">Open a project</Link>{" "}
-                to add it.
-              </p>
-            )}
-            <nav className="pagination" aria-label="Directory pages">
-              {result.page > 1 && (
-                <Link href={href(result.page - 1)}>← Previous</Link>
-              )}
-              <span>{result.total} projects</span>
-              {result.page * 24 < result.total && (
-                <Link href={href(result.page + 1)}>Next →</Link>
-              )}
-            </nav>
-          </>
-        )}
-        {health && (
-          <details>
-            <summary>Collection health</summary>
-            <p>
-              Last scheduler run: {health.lastRunAt?.toISOString() || "Never"}
-            </p>
-            {health.states.map((s) => (
-              <p key={s.state}>
-                {s.state}: {s.count}
-              </p>
-            ))}
-          </details>
-        )}
+        <Suspense fallback={<p role="status">Loading projects…</p>}>
+          <ProjectDirectory searchParams={searchParams} />
+        </Suspense>
       </main>
       <SiteFooter />
     </>
