@@ -1,6 +1,14 @@
 .viewer-shell {
   --viewer-gutter: clamp(24px, 5vw, 80px);
-  width: calc(100% - 2 * var(--viewer-gutter));
+  --viewer-max-gutter: max(var(--viewer-gutter), (100% - 960px) / 2);
+  width: calc(
+    100% - 2 *
+      (
+        var(--viewer-gutter) +
+          (var(--viewer-max-gutter) - var(--viewer-gutter)) *
+          var(--viewer-spacing, 0)
+      )
+  );
   margin: 50px auto 80px;
   flex: 1;
   display: flex;
@@ -163,10 +171,65 @@
   border-color: var(--foreground);
   background: var(--surface);
 }
-.viewer-primary-tabs {
-  gap: 8px;
+.viewer-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 24px;
   margin: 20px 0 28px;
   border-bottom: 1px solid var(--border);
+}
+.viewer-primary-tabs {
+  gap: 8px;
+  margin: 0;
+}
+.viewer-page-controls {
+  display: flex;
+  width: calc(100% - 2 * var(--site-gutter));
+  margin: 12px auto 0;
+}
+.viewer-page-controls + .viewer-shell {
+  margin-top: 0;
+}
+.viewer-spacing-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  padding-block: 12px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  height: calc(1.6em + 24px);
+}
+.viewer-spacing-control input {
+  appearance: none;
+  width: 100px;
+  height: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--border);
+  cursor: pointer;
+}
+.viewer-spacing-control input::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--foreground);
+}
+.viewer-spacing-control input::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--foreground);
+}
+.viewer-spacing-control input:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 6px;
 }
 .viewer-primary-tabs button {
   position: relative;
@@ -411,7 +474,7 @@
   font-size: clamp(28px, 4vw, 44px);
   line-height: 1.2;
   letter-spacing: -0.05em;
-  margin-bottom: 12px;
+  margin: 0 0 12px;
 }
 .viewer-summary > p {
   color: var(--muted);

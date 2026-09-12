@@ -213,6 +213,26 @@ function SourcesView({ snapshot, selection, onChange }) {
 }
 
 export default function OpenShipViewer({ initialSnapshot = null }) {
+  const [contentSpacing, setContentSpacing] = useState(50);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("openship-content-spacing");
+      const saved = stored === null ? 50 : Number(stored);
+      if (Number.isFinite(saved))
+        setContentSpacing(Math.min(100, Math.max(0, saved)));
+    } catch {
+      // Keep the default when browser storage is unavailable.
+    }
+  }, []);
+  const changeContentSpacing = (event) => {
+    const value = Number(event.target.value);
+    setContentSpacing(value);
+    try {
+      localStorage.setItem("openship-content-spacing", String(value));
+    } catch {
+      // The slider still works when browser storage is unavailable.
+    }
+  };
   const { data: session } = authClient.useSession();
   const [saveStatus, setSaveStatus] = useState("");
   const [input, setInput] = useState("");
@@ -367,197 +387,224 @@ export default function OpenShipViewer({ initialSnapshot = null }) {
   };
 
   return (
-    <main className={`viewer-shell${snapshot ? "" : " viewer-shell-empty"}`}>
-      {!snapshot && (
-        <>
-          <header className="viewer-heading">
-            <h1>Open a project.</h1>
-            <p>Explore its source and system design.</p>
-          </header>
-          <form className="viewer-open-form" onSubmit={submit}>
-            <label htmlFor="provider-url">Project URL</label>
-            <div>
-              <input
-                id="provider-url"
-                type="url"
-                required
-                placeholder="https://example.com"
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                spellCheck={false}
-              />
-              <button type="submit">Open →</button>
-            </div>
-          </form>
-        </>
-      )}
-      {phase && (
-        <div className="viewer-status" role="status">
-          <span>{phase}</span>
-          <button
-            onClick={() => {
-              request.current?.abort();
-              setPhase("");
-            }}
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-      {error && (
-        <div className="viewer-error" role="alert">
-          <h2>
-            {{
-              unsupported: "OpenShip not found",
-              transport: "Connection or CORS error",
-              validation: "Invalid OpenShip document",
-              size: "Viewer limit exceeded",
-              timeout: "Request timed out",
-              url: "Invalid provider URL",
-            }[error.code] ?? "Unable to open provider"}
-          </h2>
-          <p>{error.message}</p>
-          {error.sourcesAvailable && (
+    <>
+      <div className="viewer-page-controls">
+        <label className="viewer-spacing-control">
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={contentSpacing}
+            onChange={changeContentSpacing}
+            aria-label="Content margins"
+            aria-valuetext={
+              contentSpacing === 0
+                ? "Minimum margins"
+                : contentSpacing === 100
+                  ? "Maximum margins, home page width"
+                  : `${contentSpacing}%`
+            }
+          />
+        </label>
+      </div>
+      <main
+        className={`viewer-shell${snapshot ? "" : " viewer-shell-empty"}`}
+        style={{ "--viewer-spacing": contentSpacing / 100 }}
+      >
+        {!snapshot && (
+          <>
+            <header className="viewer-heading">
+              <h1>Open a project.</h1>
+              <p>Explore its source and system design.</p>
+            </header>
+            <form className="viewer-open-form" onSubmit={submit}>
+              <label htmlFor="provider-url">Project URL</label>
+              <div>
+                <input
+                  id="provider-url"
+                  type="url"
+                  required
+                  placeholder="https://example.com"
+                  value={input}
+                  onChange={(event) => setInput(event.target.value)}
+                  spellCheck={false}
+                />
+                <button type="submit">Open →</button>
+              </div>
+            </form>
+          </>
+        )}
+        {phase && (
+          <div className="viewer-status" role="status">
+            <span>{phase}</span>
             <button
-              onClick={() =>
-                void open(
-                  new URLSearchParams(window.location.search).get("url"),
-                  new URLSearchParams({ view: "sources" }),
-                  true,
-                )
-              }
+              onClick={() => {
+                request.current?.abort();
+                setPhase("");
+              }}
             >
-              Load advertised Sources instead
+              Cancel
             </button>
-          )}
-        </div>
-      )}
-      {snapshot && selection && (
-        <>
-          <header className="viewer-project-heading">
-            <h1>{snapshot.verified.manifest.project.name}</h1>
-            <p className="viewer-project-description">
-              {snapshot.verified.manifest.project.productDescription}
-            </p>
-          </header>
-          <div
-            className="viewer-tabs viewer-primary-tabs"
-            role="tablist"
-            aria-label="Snapshot views"
-            onKeyDown={(event) => {
-              const tabs = [
-                ...event.currentTarget.querySelectorAll(
-                  '[role="tab"]:not(:disabled)',
-                ),
-              ];
-              const index = tabs.indexOf(document.activeElement);
-              let next;
-              if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
-              else if (event.key === "ArrowLeft")
-                next = (index - 1 + tabs.length) % tabs.length;
-              else if (event.key === "Home") next = 0;
-              else if (event.key === "End") next = tabs.length - 1;
-              else return;
-              event.preventDefault();
-              tabs[next].focus();
-              tabs[next].click();
-            }}
-          >
-            {[
-              { id: "summary", label: "Summary" },
-              { id: "sources", label: "Sources" },
-              { id: "system", label: "System", disabled: !snapshot.system },
-            ].map(({ id, label, disabled }) => (
-              <button
-                key={id}
-                id={`viewer-tab-${id}`}
-                type="button"
-                role="tab"
-                aria-selected={selection.view === id}
-                aria-controls={`viewer-panel-${id}`}
-                tabIndex={selection.view === id ? 0 : -1}
-                disabled={disabled}
-                title={disabled ? "No system design available" : undefined}
-                onClick={() => changeSelection({ view: id })}
-              >
-                {label}
-              </button>
-            ))}
           </div>
-          <section
-            id="viewer-panel-summary"
-            role="tabpanel"
-            aria-labelledby="viewer-tab-summary"
-            hidden={selection.view !== "summary"}
-            tabIndex={0}
-          >
-            <section className="viewer-summary">
+        )}
+        {error && (
+          <div className="viewer-error" role="alert">
+            <h2>
+              {{
+                unsupported: "OpenShip not found",
+                transport: "Connection or CORS error",
+                validation: "Invalid OpenShip document",
+                size: "Viewer limit exceeded",
+                timeout: "Request timed out",
+                url: "Invalid provider URL",
+              }[error.code] ?? "Unable to open provider"}
+            </h2>
+            <p>{error.message}</p>
+            {error.sourcesAvailable && (
+              <button
+                onClick={() =>
+                  void open(
+                    new URLSearchParams(window.location.search).get("url"),
+                    new URLSearchParams({ view: "sources" }),
+                    true,
+                  )
+                }
+              >
+                Load advertised Sources instead
+              </button>
+            )}
+          </div>
+        )}
+        {snapshot && selection && (
+          <>
+            <header className="viewer-project-heading">
+              <h1>{snapshot.verified.manifest.project.name}</h1>
               <p className="viewer-project-description">
                 {snapshot.verified.manifest.project.productDescription}
               </p>
-              <a href={snapshot.origin} target="_blank" rel="noreferrer">
-                {snapshot.origin} ↗
-              </a>
-              <p className="viewer-muted">
-                {snapshot.archivedAt && !initialSnapshot
-                  ? "The live project is unavailable. Showing a saved snapshot retrieved"
-                  : "Retrieved"}{" "}
-                <RetrievalTime
-                  value={snapshot.archivedAt ?? snapshot.retrievedAt}
-                />
-              </p>
-              {saveStatus && (
-                <p className="viewer-muted" role="status">
-                  {saveStatus}
+            </header>
+            <div className="viewer-navigation">
+              <div
+                className="viewer-tabs viewer-primary-tabs"
+                role="tablist"
+                aria-label="Snapshot views"
+                onKeyDown={(event) => {
+                  const tabs = [
+                    ...event.currentTarget.querySelectorAll(
+                      '[role="tab"]:not(:disabled)',
+                    ),
+                  ];
+                  const index = tabs.indexOf(document.activeElement);
+                  let next;
+                  if (event.key === "ArrowRight")
+                    next = (index + 1) % tabs.length;
+                  else if (event.key === "ArrowLeft")
+                    next = (index - 1 + tabs.length) % tabs.length;
+                  else if (event.key === "Home") next = 0;
+                  else if (event.key === "End") next = tabs.length - 1;
+                  else return;
+                  event.preventDefault();
+                  tabs[next].focus();
+                  tabs[next].click();
+                }}
+              >
+                {[
+                  { id: "summary", label: "Summary" },
+                  { id: "sources", label: "Sources" },
+                  { id: "system", label: "System", disabled: !snapshot.system },
+                ].map(({ id, label, disabled }) => (
+                  <button
+                    key={id}
+                    id={`viewer-tab-${id}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={selection.view === id}
+                    aria-controls={`viewer-panel-${id}`}
+                    tabIndex={selection.view === id ? 0 : -1}
+                    disabled={disabled}
+                    title={disabled ? "No system design available" : undefined}
+                    onClick={() => changeSelection({ view: id })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <section
+              id="viewer-panel-summary"
+              role="tabpanel"
+              aria-labelledby="viewer-tab-summary"
+              hidden={selection.view !== "summary"}
+              tabIndex={0}
+            >
+              <section className="viewer-summary">
+                <p className="viewer-project-description">
+                  {snapshot.verified.manifest.project.productDescription}
                 </p>
+                <a href={snapshot.origin} target="_blank" rel="noreferrer">
+                  {snapshot.origin} ↗
+                </a>
+                <p className="viewer-muted">
+                  {snapshot.archivedAt && !initialSnapshot
+                    ? "The live project is unavailable. Showing a saved snapshot retrieved"
+                    : "Retrieved"}{" "}
+                  <RetrievalTime
+                    value={snapshot.archivedAt ?? snapshot.retrievedAt}
+                  />
+                </p>
+                {saveStatus && (
+                  <p className="viewer-muted" role="status">
+                    {saveStatus}
+                  </p>
+                )}
+              </section>
+              <ProjectSummaries
+                key={snapshot.origin}
+                project={snapshot.verified.manifest.project}
+                detail
+              />
+            </section>
+            <section
+              id="viewer-panel-sources"
+              role="tabpanel"
+              aria-labelledby="viewer-tab-sources"
+              hidden={selection.view !== "sources"}
+              tabIndex={0}
+            >
+              {selection.view === "sources" && (
+                <SourcesView
+                  snapshot={snapshot}
+                  selection={selection}
+                  onChange={changeSelection}
+                />
               )}
             </section>
-            <ProjectSummaries
-              key={snapshot.origin}
-              project={snapshot.verified.manifest.project}
-              detail
-            />
-          </section>
-          <section
-            id="viewer-panel-sources"
-            role="tabpanel"
-            aria-labelledby="viewer-tab-sources"
-            hidden={selection.view !== "sources"}
-            tabIndex={0}
-          >
-            {selection.view === "sources" && (
-              <SourcesView
-                snapshot={snapshot}
-                selection={selection}
-                onChange={changeSelection}
-              />
-            )}
-          </section>
-          <section
-            id="viewer-panel-system"
-            role="tabpanel"
-            aria-labelledby="viewer-tab-system"
-            hidden={selection.view !== "system"}
-            tabIndex={0}
-          >
-            {selection.view === "system" && snapshot.system && (
-              <SystemView
-                snapshot={snapshot}
-                selection={selection}
-                onChange={changeSelection}
-              />
-            )}
-          </section>
-        </>
-      )}
-      {!snapshot && !phase && !error && (
-        <p className="viewer-muted">
-          Enter a public OpenShip URL, or{" "}
-          <a href="?url=https%3A%2F%2Fopenship.dev">
-            explore OpenShip itself →
-          </a>
-        </p>
-      )}
-    </main>
+            <section
+              id="viewer-panel-system"
+              role="tabpanel"
+              aria-labelledby="viewer-tab-system"
+              hidden={selection.view !== "system"}
+              tabIndex={0}
+            >
+              {selection.view === "system" && snapshot.system && (
+                <SystemView
+                  snapshot={snapshot}
+                  selection={selection}
+                  onChange={changeSelection}
+                />
+              )}
+            </section>
+          </>
+        )}
+        {!snapshot && !phase && !error && (
+          <p className="viewer-muted">
+            Enter a public OpenShip URL, or{" "}
+            <a href="?url=https%3A%2F%2Fopenship.dev">
+              explore OpenShip itself →
+            </a>
+          </p>
+        )}
+      </main>
+    </>
   );
 }
