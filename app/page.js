@@ -17,9 +17,11 @@ async function FeaturedProjects() {
         <h2>Featured projects</h2>
         <Link href="/projects">All projects →</Link>
       </div>
-      {featured.map((p) => (
-        <ProjectCard key={p.id} project={p} />
-      ))}
+      <div className="project-grid">
+        {featured.map((p) => (
+          <ProjectCard key={p.id} project={p} />
+        ))}
+      </div>
     </section>
   );
 }

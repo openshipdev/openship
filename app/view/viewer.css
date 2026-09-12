@@ -1,6 +1,9 @@
 .viewer-shell {
-  width: min(1400px, calc(100% - 48px));
+  width: calc(100% - 2 * var(--site-gutter));
   margin: 50px auto 80px;
+}
+.viewer-shell-empty {
+  max-width: 960px;
 }
 .viewer-heading {
   max-width: 780px;
@@ -303,7 +306,6 @@
 }
 @media (max-width: 700px) {
   .viewer-shell {
-    width: calc(100% - 32px);
     margin-top: 30px;
   }
   .viewer-sources {

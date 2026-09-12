@@ -62,11 +62,13 @@ export default async function ProjectsPage({ searchParams }) {
           <p role="alert">{error}</p>
         ) : (
           <>
-            {result.items.map((p) => (
-              <ProjectCard key={p.id} project={p}>
-                {admin && <ProjectAdmin project={p} />}
-              </ProjectCard>
-            ))}
+            <div className="project-grid">
+              {result.items.map((p) => (
+                <ProjectCard key={p.id} project={p}>
+                  {admin && <ProjectAdmin project={p} />}
+                </ProjectCard>
+              ))}
+            </div>
             {!result.items.length && (
               <p className="empty-directory">
                 No projects here yet. <Link href="/view">Open a project</Link>{" "}

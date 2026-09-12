@@ -367,7 +367,7 @@ export default function OpenShipViewer({ initialSnapshot = null }) {
   };
 
   return (
-    <main className="viewer-shell">
+    <main className={`viewer-shell${snapshot ? "" : " viewer-shell-empty"}`}>
       {!snapshot && (
         <>
           <header className="viewer-heading">

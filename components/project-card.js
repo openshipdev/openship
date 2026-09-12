@@ -1,10 +1,10 @@
 import Link from "next/link";
-import ProjectSummaries from "./project-summaries";
 export default function ProjectCard({ project: p, children }) {
   return (
     <article className="project-card">
       <div className="project-card-title">
         <Link
+          className="project-card-link"
           href={
             p.oshHash
               ? `/osh/${p.oshHash}`
@@ -20,9 +20,31 @@ export default function ProjectCard({ project: p, children }) {
           {p.hidden && <span>Hidden</span>}
         </div>
       </div>
-      <ProjectSummaries project={p} />
+      <p className="project-card-description">{p.productDescription}</p>
       <div className="project-caption">
-        <span>{new URL(p.origin).hostname}</span>
+        <a
+          className="project-website-link"
+          href={p.origin}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`Visit ${p.name} website (opens in a new tab)`}
+          title={new URL(p.origin).hostname}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M14 3h7v7M21 3 10 14" />
+            <path d="M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5" />
+          </svg>
+        </a>
         <span>{p.hasFullBundle ? "Snapshot saved" : "Metadata only"}</span>
         {p.availability !== "available" && <span>{p.availability}</span>}
         <span>
