@@ -16,7 +16,7 @@ export default function ProjectSummaries({ project, detail = false }) {
           className="project-summary-section"
           aria-labelledby={`${summaryId}-heading`}
         >
-          <h2 id={`${summaryId}-heading`}>Project summary</h2>
+          <h2 id={`${summaryId}-heading`}>Project Summary</h2>
           <div
             id={summaryId}
             className={`project-markdown${expanded ? "" : " project-detail-preview"}`}
@@ -37,7 +37,7 @@ export default function ProjectSummaries({ project, detail = false }) {
           </button>
         </section>
         <section className="project-summary-section project-technical-section">
-          <h2>Technical summary</h2>
+          <h2>Technical Summary</h2>
           <p className="project-technical-description">
             {project.technicalDescription}
           </p>

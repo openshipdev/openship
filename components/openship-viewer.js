@@ -15,6 +15,39 @@ import { loadArchivedProvider } from "../lib/viewer";
 
 const allowLoopback = process.env.NODE_ENV === "development";
 
+function RetrievalTime({ value }) {
+  const [label, setLabel] = useState(null);
+  useEffect(() => {
+    const date = new Date(value);
+    const absolute = new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "long",
+    }).format(date);
+    const relative = new Intl.RelativeTimeFormat(undefined, {
+      numeric: "auto",
+    });
+    const update = () => {
+      const seconds = (date.getTime() - Date.now()) / 1000;
+      const [unit, size] = [
+        ["year", 31536000],
+        ["month", 2592000],
+        ["week", 604800],
+        ["day", 86400],
+        ["hour", 3600],
+        ["minute", 60],
+        ["second", 1],
+      ].find(([, size]) => Math.abs(seconds) >= size) ?? ["second", 1];
+      setLabel(
+        `${absolute} (${relative.format(Math.trunc(seconds / size), unit)})`,
+      );
+    };
+    update();
+    const timer = setInterval(update, 10000);
+    return () => clearInterval(timer);
+  }, [value]);
+  return <time dateTime={value}>{label ?? value}</time>;
+}
+
 function download(name, content) {
   const blob = new Blob([content], { type: "application/octet-stream" });
   const url = URL.createObjectURL(blob);
@@ -413,12 +446,9 @@ export default function OpenShipViewer({ initialSnapshot = null }) {
               {snapshot.archivedAt && !initialSnapshot
                 ? "The live project is unavailable. Showing a saved snapshot retrieved"
                 : "Retrieved"}{" "}
-              <time dateTime={snapshot.archivedAt ?? snapshot.retrievedAt}>
-                {new Date(snapshot.archivedAt ?? snapshot.retrievedAt)
-                  .toISOString()
-                  .replace("T", " at ")
-                  .replace(/\.\d{3}Z$/, " UTC")}
-              </time>
+              <RetrievalTime
+                value={snapshot.archivedAt ?? snapshot.retrievedAt}
+              />
             </p>
             {saveStatus && (
               <p className="viewer-muted" role="status">
