@@ -229,6 +229,10 @@ export default function OpenShipViewer({ initialSnapshot = null }) {
           }
         }
         if (controller.signal.aborted) return;
+        next = {
+          ...next,
+          retrievedAt: next.archivedAt ?? new Date().toISOString(),
+        };
         const state = resolveSelection(params, next);
         loaded.current = next;
         setSnapshot(next);
@@ -405,14 +409,17 @@ export default function OpenShipViewer({ initialSnapshot = null }) {
             <a href={snapshot.origin} target="_blank" rel="noreferrer">
               {snapshot.origin} ↗
             </a>
-            {snapshot.archivedAt && (
-              <p className="viewer-muted">
-                {initialSnapshot
-                  ? "Saved snapshot retrieved"
-                  : "The live project is unavailable. Showing a saved snapshot retrieved"}{" "}
-                {new Date(snapshot.archivedAt).toISOString().slice(0, 10)}.
-              </p>
-            )}
+            <p className="viewer-muted">
+              {snapshot.archivedAt && !initialSnapshot
+                ? "The live project is unavailable. Showing a saved snapshot retrieved"
+                : "Retrieved"}{" "}
+              <time dateTime={snapshot.archivedAt ?? snapshot.retrievedAt}>
+                {new Date(snapshot.archivedAt ?? snapshot.retrievedAt)
+                  .toISOString()
+                  .replace("T", " at ")
+                  .replace(/\.\d{3}Z$/, " UTC")}
+              </time>
+            </p>
             {saveStatus && (
               <p className="viewer-muted" role="status">
                 {saveStatus}
