@@ -399,7 +399,9 @@ export default function OpenShipViewer({ initialSnapshot = null }) {
         <>
           <section className="viewer-summary">
             <h1>{snapshot.verified.manifest.project.name}</h1>
-            <ProjectSummaries key={snapshot.origin} project={snapshot.verified.manifest.project} />
+            <p className="viewer-project-description">
+              {snapshot.verified.manifest.project.productDescription}
+            </p>
             <a href={snapshot.origin} target="_blank" rel="noreferrer">
               {snapshot.origin} ↗
             </a>
@@ -417,6 +419,11 @@ export default function OpenShipViewer({ initialSnapshot = null }) {
               </p>
             )}
           </section>
+          <ProjectSummaries
+            key={snapshot.origin}
+            project={snapshot.verified.manifest.project}
+            detail
+          />
           <div
             className="viewer-tabs viewer-primary-tabs"
             aria-label="Snapshot views"
