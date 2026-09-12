@@ -1,3 +1,4 @@
+export interface Project { name: string; productDescription: string; productSummary: string; technicalDescription: string; technicalSummary: string; [key: string]: unknown }
 export type OpenShipEncoding = "utf-8" | "base64";
 export type OpenShipCapability = "discovery" | "sources" | "changes" | "systems";
 export type OpenShipMcpOperation = "manifest" | "read";
@@ -6,10 +7,10 @@ export const OPENSHIP_MCP_TOOL_NAME: "openship";
 export const OPENSHIP_MCP_MANIFEST_RESOURCE_URI: "openship://sources/manifest";
 export const OPENSHIP_MCP_FILE_RESOURCE_TEMPLATE: "openship://sources/file{?path}";
 export interface SourceFileMetadata { path: string; size: number; sha256: string; encoding: OpenShipEncoding; mediaType: string; type: "file" | "symlink"; target?: string; [key: string]: unknown }
-export interface SourcesManifest { openship: "1.0"; capability: "sources"; digest: string; project: { name: string; description: string; [key: string]: unknown }; totals: { files: number; bytes: number; [key: string]: unknown }; files: SourceFileMetadata[]; [key: string]: unknown }
+export interface SourcesManifest { openship: "1.0"; capability: "sources"; digest: string; project: Project; totals: { files: number; bytes: number; [key: string]: unknown }; files: SourceFileMetadata[]; [key: string]: unknown }
 export interface SourcesBundle { openship: "1.0"; capability: "sources"; digest: string; files: Record<string, { encoding: OpenShipEncoding; content: string; [key: string]: unknown }>; [key: string]: unknown }
 export interface DiscoveryAgent { summary: string; instructions: string; skill: string; [key: string]: unknown }
-export interface DiscoveryDocument { openship: "1.0"; capability: "discovery"; project: { name: string; description: string; [key: string]: unknown }; agent: DiscoveryAgent; page?: string; capabilities: { sources: { description: string; manifest: string; bundle: string; mcp?: string; [key: string]: unknown }; systems?: { description: string; document: string; [key: string]: unknown }; changes?: { description: string; policy: string; submit: string; status: string; [key: string]: unknown }; [key: string]: unknown }; [key: string]: unknown }
+export interface DiscoveryDocument { openship: "1.0"; capability: "discovery"; project: Project; agent: DiscoveryAgent; page?: string; capabilities: { sources: { description: string; manifest: string; bundle: string; mcp?: string; [key: string]: unknown }; systems?: { description: string; document: string; [key: string]: unknown }; changes?: { description: string; policy: string; submit: string; status: string; [key: string]: unknown }; [key: string]: unknown }; [key: string]: unknown }
 export type SystemsNodeKind = "Root" | "Block" | "Store" | "Host" | "Container" | "Process" | "Contract" | "Library";
 export type SystemsNodeOwnership = "first_party" | "third_party";
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };

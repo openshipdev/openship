@@ -1,6 +1,6 @@
 import Link from "next/link";
 import ThemeToggle from "../app/theme-toggle";
-
+import AccountControl from "./account-control";
 export function SiteHeader() {
   return (
     <header className="site-header">
@@ -9,25 +9,27 @@ export function SiteHeader() {
         OpenShip
       </Link>
       <nav className="site-nav" aria-label="Primary navigation">
-        <Link href="/view">Viewer</Link>
-        <Link href="/docs/overview">Docs</Link>
-        <Link href="/skill/SKILL.md">Skill</Link>
-        <a href="https://github.com/openshipdev/openship" rel="noreferrer" target="_blank">
-          Source
-        </a>
+        <Link href="/">Home</Link>
+        <Link href="/view">View</Link>
+        <Link href="/docs">Docs</Link>
+        <Link href="/projects">Projects</Link>
+        <AccountControl />
         <ThemeToggle />
       </nav>
     </header>
   );
 }
-
 export function SiteFooter() {
   return (
     <footer className="site-footer">
-      <p>OpenShip v1.0 · Draft</p>
+      <p>Open software. Understand how it works.</p>
       <div className="footer-links">
-        <Link href="/docs/overview">Docs</Link>
-        <a href="https://github.com/openshipdev/openship" rel="noreferrer" target="_blank">
+        <Link href="/docs">Docs</Link>
+        <a
+          href="https://github.com/openshipdev/openship"
+          target="_blank"
+          rel="noreferrer"
+        >
           GitHub ↗
         </a>
       </div>

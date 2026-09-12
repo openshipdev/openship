@@ -130,7 +130,10 @@ export function validateSourcesManifest(value) {
   if (!digestPattern.test(manifest.digest)) fail("$.digest", "must be a sha256 digest");
   const project = object(manifest.project, "$.project");
   string(project.name, "$.project.name");
-  string(project.description, "$.project.description");
+  for (const key of ["productDescription", "productSummary", "technicalDescription", "technicalSummary"]) {
+    const value = string(project[key], `$.project.${key}`);
+    if (key.endsWith("Description") && [...value].length > 120) fail(`$.project.${key}`, "must be at most 120 Unicode characters");
+  }
   const totals = object(manifest.totals, "$.totals");
   if (!Number.isInteger(totals.files) || totals.files < 0) fail("$.totals.files", "must be a non-negative integer");
   if (!Number.isInteger(totals.bytes) || totals.bytes < 0) fail("$.totals.bytes", "must be a non-negative integer");
@@ -189,7 +192,10 @@ export function validateDiscovery(value) {
   };
   const project = object(discovery.project, "$.project");
   string(project.name, "$.project.name");
-  string(project.description, "$.project.description");
+  for (const key of ["productDescription", "productSummary", "technicalDescription", "technicalSummary"]) {
+    const value = string(project[key], `$.project.${key}`);
+    if (key.endsWith("Description") && [...value].length > 120) fail(`$.project.${key}`, "must be at most 120 Unicode characters");
+  }
   const agent = object(discovery.agent, "$.agent");
   string(agent.summary, "$.agent.summary");
   string(agent.instructions, "$.agent.instructions");

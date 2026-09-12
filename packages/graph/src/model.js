@@ -131,16 +131,107 @@ export function gridPositions(cards) {
   return positions;
 }
 
-export async function autoLayout(model) {
+export const connectionLabel = (edge) => [edge.type, edge.metadata?.protocol].filter(Boolean).join(" · ");
+
+// Both the card border and nested row border affect DOM handle centers.
+export function cardHandle(card, nodeId, source) {
+  const row = card.rows.get(nodeId);
+  const inset = nodeId === card.node.id ? 0 : 1;
+  return { x: row.left + 1 + (source ? 288 - inset : inset), y: row.top + 37 + inset };
+}
+
+// Round only as far as adjacent segments allow, including short port stubs.
+export function roundedRoute(points, radius = 6) {
+  const clean = points.filter((point, i) => !i || point.x !== points[i - 1].x || point.y !== points[i - 1].y);
+  if (!clean.length) return "";
+  let path = `M ${clean[0].x} ${clean[0].y}`;
+  for (let i = 1; i < clean.length - 1; i++) {
+    const a = clean[i - 1], b = clean[i], c = clean[i + 1];
+    const before = Math.hypot(b.x - a.x, b.y - a.y), after = Math.hypot(c.x - b.x, c.y - b.y);
+    const r = Math.min(radius, before / 2, after / 2);
+    path += ` L ${b.x + (a.x - b.x) * r / before} ${b.y + (a.y - b.y) * r / before} Q ${b.x} ${b.y} ${b.x + (c.x - b.x) * r / after} ${b.y + (c.y - b.y) * r / after}`;
+  }
+  const last = clean.at(-1);
+  return `${path} L ${last.x} ${last.y}`;
+}
+
+export async function autoLayout(model, measureLabel = (text) => text.length * 7) {
   const { default: ELK } = await import("elkjs/lib/elk.bundled.js");
-  const ids = new Set(model.cards.map((card) => card.node.id));
+  const cards = [...model.cards].sort((a, b) => a.node.id.localeCompare(b.node.id));
+  const byId = new Map(cards.map((card) => [card.node.id, card]));
+  const connections = model.edges.filter((edge) => edge.source !== edge.target && byId.has(edge.source) && byId.has(edge.target))
+    .sort((a, b) => a.id.localeCompare(b.id));
+  // Generated IDs avoid collisions with provider node/edge identifiers.
+  const portId = (id, source) => JSON.stringify(["port", id, source]);
   const result = await new ELK().layout({
     id: "layout",
-    layoutOptions: { "elk.algorithm": "layered", "elk.direction": "RIGHT", "elk.spacing.nodeNode": "80", "elk.layered.spacing.nodeNodeBetweenLayers": "130" },
-    children: model.cards.map((card) => ({ id: card.node.id, width: card.width, height: card.height })),
-    edges: model.edges.filter((edge) => edge.source !== edge.target && ids.has(edge.source) && ids.has(edge.target)).map((edge) => ({ id: edge.id, sources: [edge.source], targets: [edge.target] })),
+    layoutOptions: {
+      "elk.algorithm": "layered", "elk.direction": "RIGHT", "elk.edgeRouting": "ORTHOGONAL",
+      "elk.randomSeed": "1", "elk.spacing.nodeNode": "80",
+      "elk.spacing.edgeNode": "24", "elk.spacing.edgeEdge": "16",
+      "elk.layered.spacing.nodeNodeBetweenLayers": "130",
+      "elk.layered.spacing.edgeNodeBetweenLayers": "24",
+      "elk.layered.spacing.edgeEdgeBetweenLayers": "16",
+      "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
+      "elk.edgeLabels.placement": "CENTER",
+    },
+    children: cards.map((card) => ({
+      id: card.node.id, width: card.width, height: card.height,
+      layoutOptions: { "elk.portConstraints": "FIXED_POS" },
+      ports: [card.node, ...card.children].flatMap((node) => [false, true].map((source) => ({
+        id: portId(node.id, source), width: 0, height: 0,
+        // Route outside the card; connect the boundary to the inset row with a stub.
+        x: source ? card.width : 0, y: cardHandle(card, node.id, source).y,
+        layoutOptions: { "elk.port.side": source ? "EAST" : "WEST" },
+      }))),
+    })),
+    edges: connections.map((edge) => ({
+      id: edge.id, sources: [portId(edge.fromNodeId, true)], targets: [portId(edge.toNodeId, false)],
+      labels: [{ text: connectionLabel(edge), width: Math.ceil(measureLabel(connectionLabel(edge))) + 12, height: 24 }],
+    })),
   });
-  return new Map(result.children.map((node) => [node.id, { x: node.x + 40, y: node.y + 110 }]));
+  const translate = ({ x, y }) => ({ x: x + 40, y: y + 110 });
+  const positions = new Map(result.children.map((node) => [node.id, translate(node)]));
+  const routes = new Map();
+  const edgesById = new Map(connections.map((edge) => [edge.id, edge]));
+  for (const laidOut of result.edges ?? []) {
+    const edge = edgesById.get(laidOut.id), section = laidOut.sections?.[0];
+    if (!section) continue;
+    const endpoint = (id, nodeId, source) => {
+      const position = positions.get(id), handle = cardHandle(byId.get(id), nodeId, source);
+      return { x: position.x + handle.x, y: position.y + handle.y };
+    };
+    const points = [endpoint(edge.source, edge.fromNodeId, true),
+      ...[section.startPoint, ...(section.bendPoints ?? []), section.endPoint].map(translate),
+      endpoint(edge.target, edge.toNodeId, false)];
+    const label = laidOut.labels?.[0];
+    routes.set(edge.id, {
+      points, path: roundedRoute(points),
+      label: label && { ...translate(label), width: label.width, height: label.height },
+    });
+  }
+  return { positions, routes };
+}
+
+// A manual move can invalidate even an unrelated edge by moving a card into its
+// corridor. Recompute these edges with React Flow's live endpoint router.
+export function invalidateRoutes(routes, edges, movedCards) {
+  if (!routes.size || !movedCards.length) return routes;
+  const moved = new Set(movedCards.map((card) => card.id));
+  const intersects = (a, b, box) => Math.max(a.x, b.x) >= box.x && Math.min(a.x, b.x) <= box.x + box.width
+    && Math.max(a.y, b.y) >= box.y && Math.min(a.y, b.y) <= box.y + box.height;
+  const next = new Map(routes);
+  for (const edge of edges) {
+    const route = routes.get(edge.id);
+    if (!route) continue;
+    if (moved.has(edge.source) || moved.has(edge.target) || movedCards.some((card) => {
+      const box = { x: card.x - 12, y: card.y - 24, width: card.width + 24, height: card.height + 36 };
+      return route.points.some((point, i) => i > 0 && intersects(route.points[i - 1], point, box))
+        || (route.label && intersects({ x: route.label.x, y: route.label.y },
+          { x: route.label.x + route.label.width, y: route.label.y + route.label.height }, box));
+    })) next.delete(edge.id);
+  }
+  return next.size === routes.size ? routes : next;
 }
 
 // React Flow 12 stores DOM dimensions separately from explicit node sizing.
@@ -157,4 +248,26 @@ export function updateMeasurements(previous, changes) {
     next.set(change.id, { width, height });
   }
   return next;
+}
+
+// Cards represent their nested endpoints as well as their own component.
+// Keep selection to one hop; do not traverse neighbors' other connections.
+export function graphSelection(model, selected) {
+  const neighbors = new Set(), connectedEdges = new Set();
+  const selectedCard = model.cards.find((card) => card.node.id === selected);
+  const selectedIds = new Set(selectedCard
+    ? [selected, ...selectedCard.children.map((node) => node.id)]
+    : [selected]);
+  for (const edge of model.edges) {
+    if (!selectedIds.has(edge.fromNodeId) && !selectedIds.has(edge.toNodeId)) continue;
+    connectedEdges.add(edge.id);
+    for (const [endpoint, owner] of [[edge.fromNodeId, edge.source], [edge.toNodeId, edge.target]]) {
+      if (!selectedIds.has(endpoint)) {
+        neighbors.add(endpoint);
+        if (owner !== selected) neighbors.add(owner);
+      }
+    }
+  }
+  neighbors.delete(selected);
+  return { neighbors, connectedEdges };
 }

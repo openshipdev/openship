@@ -60,8 +60,11 @@ function encode(bytes) {
 
 async function generate() {
   const declaration = JSON.parse(await readFile(declarationPath, "utf8"));
-  if (!declaration.project?.name || !declaration.project?.description) {
-    throw new Error("openship.sources.json requires project.name and project.description");
+  for (const key of ["name", "productDescription", "productSummary", "technicalDescription", "technicalSummary"]) {
+    const value = declaration.project?.[key];
+    if (typeof value !== "string" || !value.trim() || (key.endsWith("Description") && [...value].length > 120)) {
+      throw new Error(`Invalid openship.sources.json project.${key}`);
+    }
   }
   if (!Array.isArray(declaration.files) || declaration.files.length === 0) {
     throw new Error("openship.sources.json requires a non-empty files allowlist");

@@ -108,10 +108,22 @@ test("validates capability URLs before fetching them", async () => {
 
 test("restores shareable selections with safe defaults", async () => {
   const result = await loadProvider("https://example.com", provider({ systems: true }));
-  const state = { view: "system", panel: "context", node: "p.web", file: "app/page.js", layer: "technical", instance: "", hiddenDomains: [] };
+  const state = { view: "system", node: "p.web", file: "app/page.js", layer: "technical", instance: "", hiddenDomains: [] };
   assert.deepEqual(resolveSelection(new URLSearchParams(selectionQuery(result.origin, state)), result), state);
-  assert.deepEqual(resolveSelection(new URLSearchParams("view=invalid&panel=bad&node=unknown&file=missing"), result), { view: "system", panel: "architecture", node: "s.root", file: "app/page.js", layer: "technical", instance: "", hiddenDomains: [] });
-  assert.equal(resolveSelection(new URLSearchParams("view=system"), { ...result, system: null }).view, "sources");
+  assert.deepEqual(resolveSelection(new URLSearchParams("view=invalid&panel=bad&node=unknown&file=missing"), result), { view: "summary", node: "s.root", file: "app/page.js", layer: "technical", instance: "", hiddenDomains: [] });
+  assert.equal(resolveSelection(new URLSearchParams("view=system"), { ...result, system: null }).view, "summary");
+});
+
+test("summary is the default and all available tabs restore from shared URLs", async () => {
+  const result = await loadProvider("https://example.com", provider({ systems: true }));
+  for (const snapshot of [result, { ...result, system: null }]) {
+    assert.equal(resolveSelection(new URLSearchParams(), snapshot).view, "summary");
+    for (const view of ["summary", "sources", ...(snapshot.system ? ["system"] : [])]) {
+      const state = resolveSelection(new URLSearchParams({ view }), snapshot);
+      assert.equal(state.view, view);
+      assert.deepEqual(resolveSelection(new URLSearchParams(selectionQuery(snapshot.origin, state)), snapshot), state);
+    }
+  }
 });
 
 test("source selectors resolve only verified files and graph layout is deterministic", async () => {
@@ -154,6 +166,26 @@ test('layer and instance navigation round trips and resets invalid selections', 
   assert.equal(reset.layer, 'logical'); assert.equal(reset.node, 'logical.root'); assert.equal(reset.instance, '');
 });
 
+test('defaults to the provider production target while preserving explicit design selections', async () => {
+  const { system } = await fixture('systems-layered');
+  const snapshot = { system, verified: { files: [] } };
+  const state = resolveSelection(new URLSearchParams(), snapshot);
+  assert.equal(state.layer, 'provider');
+  assert.equal(state.instance, 'production');
+  assert.equal(state.node, system.layers.find(layer => layer.id === 'provider').rootNodeId);
+  for (const layer of ['provider', 'technical']) {
+    const design = resolveSelection(new URLSearchParams({ layer }), snapshot);
+    assert.equal(design.layer, layer);
+    assert.equal(design.instance, '');
+    assert.deepEqual(resolveSelection(new URLSearchParams(selectionQuery('https://example.com', design)), snapshot), design);
+  }
+  system.instances = [];
+  assert.equal(resolveSelection(new URLSearchParams(), snapshot).layer, 'provider');
+  assert.equal(resolveSelection(new URLSearchParams(), snapshot).instance, '');
+  system.layers = system.layers.filter(layer => layer.role !== 'provider');
+  assert.equal(resolveSelection(new URLSearchParams(), snapshot).layer, 'logical');
+});
+
 test('aggregate graph limits include nodes across layers and refinement links', async () => {
   const source = provider({ systems: true, mutate: d => {
     const root = { id: 'r', kind: 'Root', name: 'Root', metadata: { ownership: 'first_party' } };
@@ -174,4 +206,30 @@ test('domain filters default to all, survive URL round trips and reset hidden se
   const shared = resolveSelection(new URLSearchParams('layer=technical&node=p.web&hideDomain=web'), snapshot);
   assert.equal(shared.node, 'p.web');
   assert.equal(changeSystemLayer(system, shared, 'logical').node, 'logical.root');
+});
+
+test('offline archive loader revalidates signed resources and preserves Systems embedded source ownership', async () => {
+  const { loadArchivedProvider } = await import('../lib/viewer.js');
+  const system = structuredClone(originalSystem);
+  const d = structuredClone(originalDiscovery);
+  const resources = ['discovery','manifest','bundle','systems'].map(kind => ({kind,url:`https://archive.example/${kind}`}));
+  const values = {discovery:d,manifest:system.source.manifest,bundle:system.source.bundle,systems:system};
+  const fetch = async url => url.startsWith('/api/projects?') ? Response.json({id:'saved'}) : url === '/api/projects/saved' ? Response.json({origin:'https://example.com',archive:{retrievedAt:'2026-09-10T00:00:00Z',resources}}) : Response.json(values[new URL(url).pathname.slice(1)]);
+  const loaded = await loadArchivedProvider('https://example.com',{fetch});
+  assert.equal(loaded.system.id,system.system.id);
+  assert.equal(loaded.archivedAt,'2026-09-10T00:00:00Z');
+  values.bundle={...values.bundle,digest:'sha256:'+'0'.repeat(64)};
+  await assert.rejects(loadArchivedProvider('https://example.com',{fetch}), error => error.code === 'validation');
+});
+
+
+test("retired panel URLs cannot restore or serialize alternate system views", async () => {
+  const snapshot = await loadProvider("https://example.com", provider({ systems: true }));
+  const baseline = resolveSelection(new URLSearchParams(), snapshot);
+  for (const retired of ["architecture", "connections", "context"]) {
+    const selection = resolveSelection(new URLSearchParams({ panel: retired }), snapshot);
+    assert.deepEqual(selection, baseline);
+    assert.equal(Object.hasOwn(selection, "panel"), false);
+    assert.equal(new URLSearchParams(selectionQuery(snapshot.origin, { ...selection, panel: retired })).has("panel"), false);
+  }
 });

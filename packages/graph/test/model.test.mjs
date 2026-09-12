@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { autoLayout, buildGraph, DEFAULT_FILTERS, gridPositions, updateMeasurements } from '../src/model.js';
+import { autoLayout, buildGraph, DEFAULT_FILTERS, gridPositions, graphSelection, updateMeasurements } from '../src/model.js';
 
 const node = (id, kind, parentId, ownership = 'first_party', boundary) => ({ id, name: id, kind, parentId, metadata: { ownership, ...(boundary ? { boundary } : {}) } });
 const system = {
@@ -44,7 +44,7 @@ test('all ownership filters off leaves only the system boundary', () => {
 test('grid and ELK produce non-overlapping cards without changing provider data', async () => {
   const before = structuredClone(system);
   const graph = buildGraph(system);
-  const layouts = [gridPositions(graph.cards), await autoLayout(graph)];
+  const layouts = [gridPositions(graph.cards), (await autoLayout(graph)).positions];
   for (const layout of layouts) {
     for (const a of graph.cards) {
       const p = layout.get(a.node.id);
@@ -137,4 +137,119 @@ test('domain filters use union membership, retain unassigned nodes and parent bo
   assert.deepEqual(buildGraph(filtered).cards.map(c => c.node.id), ['host', 'unassigned']);
   assert.deepEqual(filterLayerByDomains(layer, domains, ['web', 'state']).nodes.map(n => n.id), ['root', 'unassigned']);
   assert.deepEqual(layer, before);
+});
+
+const routingSystem = {
+  rootNodeId: 'root', name: 'Layout verification',
+  nodes: [node('root', 'Root'), node('gateway', 'Host', 'root'), node('web', 'Process', 'gateway'),
+    node('worker', 'Process', 'gateway'), node('api', 'Host', 'root'), node('service', 'Process', 'api'),
+    node('db', 'Store', 'root'), node('queue', 'Store', 'root'), node('library', 'Library', 'root'), node('isolated', 'Host', 'root')],
+  edges: [
+    { id: 'request', fromNodeId: 'web', toNodeId: 'service', type: 'Runtime', metadata: { protocol: 'HTTPS / request-response' } },
+    { id: 'parallel', fromNodeId: 'web', toNodeId: 'service', type: 'Runtime', metadata: { protocol: 'WebSocket' } },
+    { id: 'read', fromNodeId: 'service', toNodeId: 'db', type: 'Dataflow', metadata: { protocol: 'PostgreSQL' } },
+    { id: 'publish', fromNodeId: 'service', toNodeId: 'queue', type: 'Runtime' },
+    { id: 'consume', fromNodeId: 'queue', toNodeId: 'worker', type: 'Dataflow' },
+    { id: 'dependency', fromNodeId: 'worker', toNodeId: 'library', type: 'Dependency' },
+    { id: 'internal', fromNodeId: 'web', toNodeId: 'worker', type: 'Runtime' },
+  ],
+};
+
+const segmentHits = (a, b, box) => Math.max(a.x, b.x) > box.x && Math.min(a.x, b.x) < box.x + box.width
+  && Math.max(a.y, b.y) > box.y && Math.min(a.y, b.y) < box.y + box.height;
+
+test('port routes attach to nested rows, reserve labels and avoid unrelated cards in a cyclic graph', async () => {
+  const { cardHandle, connectionLabel } = await import('../src/model.js');
+  const before = structuredClone(routingSystem), model = buildGraph(routingSystem);
+  const { positions, routes } = await autoLayout(model, text => text.length * 8);
+  assert.equal(routes.size, 6);
+  const labels = [];
+  for (const edge of model.edges.filter(e => e.source !== e.target)) {
+    const route = routes.get(edge.id);
+    for (const [cardId, nodeId, source, actual] of [
+      [edge.source, edge.fromNodeId, true, route.points[0]], [edge.target, edge.toNodeId, false, route.points.at(-1)],
+    ]) {
+      const card = model.cards.find(c => c.node.id === cardId), p = positions.get(cardId), handle = cardHandle(card, nodeId, source);
+      assert.deepEqual(actual, { x: p.x + handle.x, y: p.y + handle.y });
+    }
+    assert(route.label.width >= connectionLabel(edge).length * 8 + 12);
+    labels.push(route.label);
+    for (const [i, p] of route.points.entries()) {
+      assert(Number.isFinite(p.x) && Number.isFinite(p.y));
+      if (i) assert(p.x === route.points[i - 1].x || p.y === route.points[i - 1].y, 'orthogonal segment');
+    }
+    for (const card of model.cards) {
+      const box = { ...positions.get(card.node.id), width: card.width, height: card.height };
+      const label = route.label;
+      assert(!segmentHits(label, { x: label.x + label.width, y: label.y + label.height }, box), 'label clears cards');
+      if (card.node.id === edge.source || card.node.id === edge.target) continue;
+      for (let i = 1; i < route.points.length; i++) assert(!segmentHits(route.points[i - 1], route.points[i], box), 'route clears unrelated cards');
+    }
+  }
+  for (let i = 0; i < labels.length; i++) for (let j = i + 1; j < labels.length; j++) {
+    const a = labels[i];
+    assert(!segmentHits(a, { x: a.x + a.width, y: a.y + a.height }, labels[j]), 'labels do not overlap');
+  }
+  assert.notDeepEqual(routes.get('request').points, routes.get('parallel').points);
+  assert.deepEqual(routingSystem, before);
+  const reordered = buildGraph({ ...routingSystem, nodes: [...routingSystem.nodes].reverse(), edges: [...routingSystem.edges].reverse() });
+  assert.deepEqual(await autoLayout(reordered, text => text.length * 8), { positions, routes });
+});
+
+test('empty and disconnected graphs lay out without missing positions or spurious routes', async () => {
+  const empty = await autoLayout(buildGraph({ rootNodeId: 'root', nodes: [node('root', 'Root')], edges: [] }));
+  assert.equal(empty.positions.size, 0);
+  assert.equal(empty.routes.size, 0);
+  const model = buildGraph({ ...routingSystem, edges: [] });
+  const layout = await autoLayout(model);
+  assert.equal(layout.positions.size, model.cards.length);
+  assert.equal(layout.routes.size, 0);
+});
+
+test('moving cards invalidates connected routes, crossed corridors and labels, preserving the undo snapshot', async () => {
+  const { invalidateRoutes } = await import('../src/model.js');
+  const model = buildGraph(routingSystem), { routes } = await autoLayout(model);
+  const snapshot = structuredClone(routes);
+  const moved = invalidateRoutes(routes, model.edges, [{ id: 'gateway', x: 9000, y: 9000, width: 344, height: 320 }]);
+  assert(!moved.has('request'));
+  assert(!moved.has('parallel'));
+  assert(!moved.has('consume'));
+  assert(moved.has('read'));
+  const label = routes.get('read').label;
+  const obstructed = invalidateRoutes(routes, model.edges, [{ id: 'isolated', ...label }]);
+  assert(!obstructed.has('read'));
+  const p = routes.get('publish').points[2];
+  assert(!invalidateRoutes(routes, model.edges, [{ id: 'isolated', x: p.x - 2, y: p.y - 2, width: 4, height: 4 }]).has('publish'));
+  assert.equal(invalidateRoutes(routes, model.edges, []), routes);
+  assert.deepEqual(routes, snapshot);
+});
+
+test('port geometry includes host and nested row borders', async () => {
+  const { cardHandle, roundedRoute } = await import('../src/model.js');
+  const card = buildGraph(routingSystem).cards.find(c => c.node.id === 'api');
+  assert.deepEqual(cardHandle(card, 'api', false), { x: 16, y: 55 });
+  assert.deepEqual(cardHandle(card, 'service', false), { x: 17, y: 154 });
+  assert.deepEqual(cardHandle(card, 'service', true), { x: 303, y: 154 });
+  const path = roundedRoute([{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 4 }]);
+  assert.equal(path, 'M 0 0 L 1 0 Q 2 0 2 1 L 2 4');
+});
+
+
+test('card selection highlights nested incoming and outgoing edges, but only one-hop neighbors', () => {
+  const graph = buildGraph({ ...system, edges: [...system.edges,
+    { id: 'incoming', fromNodeId: 'remote', toNodeId: 'container', type: 'Runtime' },
+    { id: 'second-hop', fromNodeId: 'remote', toNodeId: 'lib', type: 'Runtime' },
+  ] });
+  const selected = graphSelection(graph, 'host');
+  assert.deepEqual([...selected.connectedEdges].sort(), ['incoming', 'library', 'local', 'network']);
+  assert.deepEqual([...selected.neighbors].sort(), ['lib', 'remote']);
+  const nested = graphSelection(graph, 'container');
+  assert.deepEqual([...nested.connectedEdges].sort(), ['incoming', 'local']);
+  assert(nested.neighbors.has('app'));
+  assert(nested.neighbors.has('remote'));
+  assert(!nested.neighbors.has('lib'));
+  const filtered = graphSelection(buildGraph(system, { ...DEFAULT_FILTERS, Runtime: false }), 'host');
+  assert(!filtered.connectedEdges.has('network'));
+  assert(!filtered.neighbors.has('remote'));
+  assert.equal(graphSelection(graph, null).connectedEdges.size, 0);
 });

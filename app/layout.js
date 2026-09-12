@@ -4,17 +4,17 @@ import { Analytics } from "@vercel/analytics/next";
 export const metadata = {
   metadataBase: new URL("https://openship.dev"),
   title: {
-    default: "OpenShip — A public interface for running software",
+    default: "OpenShip — See how a project works",
     template: "%s · OpenShip",
   },
   description:
-    "OpenShip lets running projects publish their source, accept isolated changes, and describe the system around them.",
+    "Explore the source code and system design behind open software projects.",
   icons: {
     icon: [{ url: "/logo.svg", type: "image/svg+xml" }],
   },
   openGraph: {
     title: "OpenShip",
-    description: "A public interface for running software.",
+    description: "See how a project works.",
     type: "website",
     siteName: "OpenShip",
     images: [
@@ -22,14 +22,14 @@ export const metadata = {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "OpenShip — A public interface for running software",
+        alt: "OpenShip — See how a project works",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
     title: "OpenShip",
-    description: "A public interface for running software.",
+    description: "See how a project works.",
     images: ["/og.png"],
   },
 };

@@ -4,7 +4,10 @@ import remarkGfm from "remark-gfm";
 import { headingId, resolveDocHref } from "../lib/protocol";
 
 function plainText(children) {
-  return Array.isArray(children) ? children.join("") : String(children);
+  if (Array.isArray(children)) return children.map(plainText).join("");
+  if (children && typeof children === "object")
+    return plainText(children.props?.children);
+  return children == null ? "" : String(children);
 }
 
 export default function MarkdownDocument({ markdown }) {
@@ -13,8 +16,12 @@ export default function MarkdownDocument({ markdown }) {
       remarkPlugins={[remarkGfm]}
       components={{
         h1: ({ children }) => null,
-        h2: ({ children }) => <h2 id={headingId(plainText(children))}>{children}</h2>,
-        h3: ({ children }) => <h3 id={headingId(plainText(children))}>{children}</h3>,
+        h2: ({ children }) => (
+          <h2 id={headingId(plainText(children))}>{children}</h2>
+        ),
+        h3: ({ children }) => (
+          <h3 id={headingId(plainText(children))}>{children}</h3>
+        ),
         a: ({ href, children }) => {
           const resolved = resolveDocHref(href);
           const external = resolved?.startsWith("http");

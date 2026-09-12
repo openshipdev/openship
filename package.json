@@ -8,27 +8,41 @@
     "dev": "pnpm generate:openship && next dev",
     "build": "pnpm generate:openship && next build",
     "start": "next start",
-    "test": "pnpm test:protocol && pnpm test:site-sources && pnpm test:viewer && pnpm --filter @openship/graph test",
+    "test": "pnpm test:protocol && pnpm test:site-sources && pnpm test:viewer && pnpm --filter @openship/graph test && pnpm test:collection && pnpm test:vercel",
     "test:protocol": "node scripts/validate-protocol.mjs && pnpm --filter @openship/protocol test",
     "test:site-sources": "node scripts/generate-openship-sources.mjs && node scripts/validate-openship-site.mjs",
     "generate:openship": "node scripts/generate-openship-sources.mjs",
     "build:protocol": "pnpm --filter @openship/protocol build",
     "pack:protocol": "pnpm --filter @openship/protocol pack",
     "validate:skill": "python3 /Users/gilles/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/openship",
-    "test:viewer": "node --test test/viewer.test.mjs"
+    "test:viewer": "node --test test/viewer.test.mjs",
+    "test:collection": "node --test test/collection.test.mjs test/collection-db.test.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "test:vercel": "node --test test/vercel.test.mjs test/vercel-integration.test.mjs test/gateway-device.test.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1130.0",
+    "@aws-sdk/s3-request-presigner": "^3.1130.0",
+    "@better-auth/drizzle-adapter": "^1.7.4",
+    "@better-auth/infra": "^0.4.9",
+    "@openship/graph": "workspace:*",
+    "@openship/protocol": "workspace:*",
     "@vercel/analytics": "^2.0.1",
-    "next": "^16.3.2",
+    "better-auth": "^1.7.4",
+    "drizzle-orm": "^0.45.2",
+    "ipaddr.js": "^2.5.0",
+    "next": "16.3.5",
+    "postgres": "^3.4.9",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1",
-    "@openship/protocol": "workspace:*",
-    "@openship/graph": "workspace:*"
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "ajv": "^8.20.0",
-    "ajv-formats": "^3.0.1"
+    "ajv-formats": "^3.0.1",
+    "drizzle-kit": "^0.31.10",
+    "prettier": "^3.9.6"
   }
 }

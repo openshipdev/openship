@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import { validateDiscovery, validateSources } from "../packages/protocol/src/index.js";
 import { GET as getDiscovery } from "../app/.well-known/openship.json/route.js";
 import { GET as getManifest } from "../app/openship/manifest.json/route.js";
 import { GET as getBundle } from "../app/openship/bundle.json/route.js";
+import { GET as getSkill } from "../app/skill/[...path]/route.js";
 
 const origin = "https://openship.dev";
 const responses = await Promise.all([
@@ -40,9 +41,39 @@ assert.deepEqual(Object.keys(discovery.capabilities), ["sources"]);
 assert.deepEqual(Object.keys(discovery.capabilities.sources).sort(), ["bundle", "description", "manifest"]);
 assert.equal(discovery.agent.skill, `${origin}/skill/SKILL.md`);
 assert.match(discovery.agent.instructions, /read agent\.skill/i);
-assert.equal(discovery.page, `${origin}/openship`);
+assert.equal(discovery.page, undefined); // /openship is a legacy redirect, not a provider presentation.
 assert.equal(discovery.capabilities.sources.manifest, `${origin}/openship/manifest.json`);
 assert.equal(discovery.capabilities.sources.bundle, `${origin}/openship/bundle.json`);
 assert.equal(verified.files.length, manifest.totals.files);
+
+// The skill endpoint must reproduce the published files and directory listings.
+async function validateSkillDirectory(relative = "") {
+  const entries = await readdir(new URL(`../skills/openship/${relative}`, import.meta.url), { withFileTypes: true });
+  if (relative) {
+    const response = await getSkill(null, { params: Promise.resolve({ path: relative.split("/") }) });
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json()).entries, entries.map((entry) => ({
+      name: entry.name,
+      type: entry.isDirectory() ? "directory" : "file",
+      href: `/skill/${relative}/${entry.name}`,
+    })).sort((left, right) => left.name.localeCompare(right.name)));
+  }
+  for (const entry of entries) {
+    const child = relative ? `${relative}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      await validateSkillDirectory(child);
+      continue;
+    }
+    const response = await getSkill(null, { params: Promise.resolve({ path: child.split("/") }) });
+    assert.equal(response.status, 200, child);
+    assert.equal(response.headers.get("access-control-allow-origin"), "*");
+    assert.equal(response.headers.get("cache-control"), "public, max-age=0, must-revalidate");
+    assert.deepEqual(Buffer.from(await response.arrayBuffer()), await readFile(new URL(`../skills/openship/${child}`, import.meta.url)), child);
+  }
+}
+await validateSkillDirectory();
+for (const parts of [[], ["..", "package.json"], ["references", "..", "SKILL.md"], ["references/../SKILL.md"], ["missing.md"], ["__proto__"], ["constructor"]]) {
+  assert.equal((await getSkill(null, { params: Promise.resolve({ path: parts }) })).status, 404);
+}
 
 process.stdout.write(`Validated website OpenShip Sources ${manifest.digest} (${verified.files.length} files)\n`);

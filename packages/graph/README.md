@@ -21,8 +21,12 @@ import '@openship/graph/styles.css';
 `system` takes one validated Systems 2.0 layer and must be validated before rendering.
 `selectedNodeId`, `onSelectNode`, `onOpenContext`, `toolbarControls`, and `className` are optional.
 `toolbarControls` accepts controls rendered in a full-width row below the built-in filters, including in fullscreen.
-The caller owns selection and navigation; the package owns temporary filters and
-layout. Drag host and library cards to reposition them; nested components move
+Selection can be controlled by the caller or kept locally when `selectedNodeId` is omitted.
+Selected nodes and their incoming/outgoing connections are blue; immediate neighbors
+are green, including nested nodes and internal connections. Selecting a containing
+card also highlights connections attached to its nested components.
+The package owns temporary filters and layout. Dragging, Auto layout, and Undo
+layout are available directly. Drag host and library cards to reposition them; nested components move
 with their host. Positions survive filter changes while the graph is mounted and
 reset when the viewer is reloaded. Only coordinates can change: connections,
 containment, documents, and source content remain read-only. Layout never changes
@@ -47,3 +51,24 @@ ready for release.
 The caller owns layer and instance selection. It may annotate each node with an optional `instanceBinding` (resource ID/configuration/state) for display; this is renderer input, not a protocol mutation. Shared context and refinement navigation belong to the caller.
 
 Use `filterLayerByDomains(layer, domains, hiddenDomainIds)` from `@openship/graph/model` to project a layer before rendering it. An empty hidden list shows all domains. Shared nodes remain visible if any of their domains is enabled; unassigned nodes remain visible. Required ancestors remain as boundaries, while connections to filtered-out endpoints are removed. The helper preserves the original document. The OpenShip viewer uses the same projection for its graph and connection list, and stores hidden domain IDs in repeated `hideDomain` URL parameters.
+
+Auto layout runs once the graph is ready, when the visible graph changes, and
+after entering or leaving fullscreen. Selecting nodes does not rearrange cards.
+It uses deterministic ELK layered placement with fixed ports at each
+component row, orthogonal routes, and measured connection-label space. Rounded
+routes connect those boundary ports to the original nested handles. The system
+boundary includes feedback routes and labels as well as cards. Internal card
+connections and connections to the system header keep their existing routing.
+
+Undo layout restores the positions and routes from before the last successful
+arrangement, including manual positions. Dragging recomputes affected edges with
+React Flow's live smooth-step routing; edges whose corridors or labels are crossed
+by the moved card are also invalidated. Run Auto layout again to optimize those
+routes and reserve label space. Filter changes retain positions but invalidate
+optimized routes because row geometry may change. Layout and undo are local to
+this viewer and reset when the supplied system changes.
+
+The model export `autoLayout(model, measureLabel?)` returns `{ positions, routes }`.
+`positions` maps card IDs to coordinates; `routes` maps external card-edge IDs to
+rounded paths, orthogonal points, and label rectangles. `measureLabel(text)` returns
+text width in pixels; the React viewer uses its 10px system font through Canvas.
